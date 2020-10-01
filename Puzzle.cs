@@ -83,7 +83,7 @@ namespace Sudoku
                 yield return GetColumn(i);
             }
         }
-        
+
         public IEnumerable<IEnumerable<Cell>> GetBoxes()
         {
             for (int i = 0; i < LineLength; i++)
@@ -155,7 +155,7 @@ namespace Sudoku
             var builder = new StringBuilder();
 
             const bool printIndices = true;
-            const bool printPossibilities = false;
+            const bool printPossibilities = true;
 
             if (printIndices)
             {
@@ -164,7 +164,7 @@ namespace Sudoku
                 {
                     builder.AppendFormat(" {0}  ", i);
                 }
-                 
+
                 builder.AppendLine();
             }
 
@@ -223,6 +223,7 @@ namespace Sudoku
             {
                 foreach (var cell in _cells)
                 {
+                    builder.AppendFormat("R{0}C{1}: ", cell.Row, cell.Column);
                     for (var i = 0; i < LineLength; i++)
                     {
                         var digitValue = 1 << i;
