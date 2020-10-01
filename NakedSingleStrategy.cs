@@ -39,13 +39,13 @@ namespace Sudoku
 
             foreach (var container in containers)
             {
-                var toRemove = 0;
+                var toRemove = SudokuValues.None;
 
                 foreach (var cell in container)
                 {
                     if (cell.IsResolved)
                     {
-                        toRemove |= cell.Value;
+                        toRemove = toRemove.AddOptions(cell.Value);
                     }
                     else
                     {
@@ -55,9 +55,9 @@ namespace Sudoku
 
                 foreach (var cell in temporaryCellsToChange)
                 {
-                    if ((cell.Value & toRemove) > 0)
+                    if (cell.Value.HasAnyOptions(toRemove))
                     {
-                        var newCell = cell.RemovePossibleValues(toRemove);
+                        var newCell = cell.RemoveOptions(toRemove);
 
                         if (newCell.IsResolved)
                         {
