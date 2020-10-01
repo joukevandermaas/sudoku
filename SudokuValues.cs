@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Sudoku
 {
@@ -31,22 +32,27 @@ namespace Sudoku
 
         public bool IsSingle => (Values & (Values - 1)) == 0 && Values != 0;
 
+        public int NumberOfOptions => GetOptions().Count();
+
         public SudokuValues RemoveOptions(SudokuValues options) => new SudokuValues(Values & (~options.Values));
         public SudokuValues AddOptions(SudokuValues options) => new SudokuValues(Values | options.Values);
         public bool HasAnyOptions(SudokuValues options) => (Values & options.Values) != 0;
 
         public int ToHumanValue()
         {
-            return (int)Math.Log2(Values) + 1;
+            return ((int)Math.Log2(Values)) + 1;
         }
 
-        public IEnumerable<int> ToHumanOptions()
+        public IEnumerable<int> ToHumanOptions() => GetOptions().Select(o => o.ToHumanValue());
+
+        public IEnumerable<SudokuValues> GetOptions()
         {
             for (int i = 1; i <= Puzzle.LineLength; i++)
             {
-                if (HasAnyOptions(SudokuValues.FromHumanValue(i)))
+                var option = SudokuValues.FromHumanValue(i);
+                if (HasAnyOptions(option))
                 {
-                    yield return i;
+                    yield return option;
                 }
             }
         }
