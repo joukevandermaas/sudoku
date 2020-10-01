@@ -4,13 +4,16 @@ namespace Sudoku
 {
     struct Cell : IEquatable<Cell>
     {
+        public const int Mask = 0x1FF; // only first 9 bits, we don't care about the rest
+
         // powers of two, e.g. the digit 3 is represented as 2^3
         public int Value { get; }
 
         public int Row { get; }
         public int Column { get; }
 
-        public bool IsResolved => (Value & (Value - 1)) == 0 && Value != 0;
+        public bool IsResolved => (Value & (Value - 1)) == 0 && !IsInvalid;
+        public bool IsInvalid => Value == 0;
 
         public Cell RemovePossibleValues(int possibleValues)
         {
@@ -21,7 +24,7 @@ namespace Sudoku
 
         public Cell(int value, int row, int column)
         {
-            Value = value;
+            Value = value & Mask; // discards anything besides the first 9 bits
             Row = row;
             Column = column;
         }
