@@ -21,6 +21,13 @@ namespace Sudoku
             return new Cell(Value.RemoveOptions(options), Index);
         }
 
+        public Cell SetValue(SudokuValues value)
+        {
+            if (IsResolved) throw new InvalidOperationException("Trying to set value of resolved cell");
+
+            return new Cell(value, Index);
+        }
+
         public Cell(SudokuValues value, int index)
         {
             Value = value;

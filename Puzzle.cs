@@ -16,6 +16,7 @@ namespace Sudoku
         private readonly Cell[] _cells;
 
         public bool IsSolved => _cells.All(c => c.IsResolved);
+        public bool IsInvalid => _cells.Any(c => c.IsInvalid);
 
         public Puzzle(string puzzle)
         {
