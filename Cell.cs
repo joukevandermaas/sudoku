@@ -4,70 +4,45 @@ namespace Sudoku
 {
     struct Cell : IEquatable<Cell>
     {
-        public const int Mask = 0x1FF; // only first 9 bits, we don't care about the rest
+        public SudokuValues Value { get; }
 
-        // powers of two, e.g. the digit 3 is represented as 2^3
-        public int Value { get; }
+        public int Index { get; }
 
-        public int Row { get; }
-        public int Column { get; }
+        public int Row => Index / Puzzle.LineLength;
+        public int Column => Index % Puzzle.LineLength;
 
-        public bool IsResolved => (Value & (Value - 1)) == 0 && !IsInvalid;
-        public bool IsInvalid => Value == 0;
+        public bool IsResolved => Value.IsSingle;
+        public bool IsInvalid => Value == SudokuValues.None;
 
-        public Cell RemovePossibleValues(int possibleValues)
+        public Cell RemoveOptions(SudokuValues options)
         {
             if (IsResolved) throw new InvalidOperationException("Trying to remove possibility from resolved cell");
 
-            return new Cell(Value & (~possibleValues), Row, Column);
+            return new Cell(Value.RemoveOptions(options), Index);
         }
 
-        public Cell(int value, int row, int column)
+        public Cell(SudokuValues value, int index)
         {
-            Value = value & Mask; // discards anything besides the first 9 bits
-            Row = row;
-            Column = column;
+            Value = value;
+            Index = index;
         }
 
-        public static bool operator ==(Cell left, Cell right)
-        {
-            return left.Equals(right);
-        }
-        public static bool operator !=(Cell left, Cell right)
-        {
-            return !left.Equals(right);
-        }
+        public static bool operator ==(Cell left, Cell right) => left.Equals(right);
+        public static bool operator !=(Cell left, Cell right) => !left.Equals(right);
 
-        public override bool Equals(object? obj)
-        {
-            return obj is Cell other && Equals(other);
-        }
+        public override bool Equals(object? obj) => obj is Cell other && Equals(other);
 
-        public bool Equals(Cell other)
-        {
-            return other.Value == Value;
-        }
+        public bool Equals(Cell other) => other.Value == Value;
 
-        public override string ToString()
-        {
-            return ToString(false);
-        }
+        public override string ToString() => ToString(false);
 
         public string ToString(bool full)
         {
             var empty = full ? " " : ".";
 
-            return IsResolved ? FriendlyNumber(Value).ToString() : empty;
-
-            static int FriendlyNumber(int val)
-            {
-                return (int)Math.Log2(val) + 1;
-            }
+            return IsResolved ? Value.ToString() : empty;
         }
 
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Value);
-        }
+        public override int GetHashCode() => HashCode.Combine(Value);
     }
 }

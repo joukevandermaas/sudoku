@@ -23,14 +23,7 @@ namespace Sudoku
 
             for (var i = 0; i < _cells.Length; i++)
             {
-                var row = i / LineLength;
-                var col = i % LineLength;
-
-                var digit = (int)(puzzle[i] - 48); // 48 is 0 in ascii
-                var cell = digit == default
-                    ? new Cell(~0, row, col) // all options
-                    : new Cell(1 << (digit - 1), row, col); // single option
-
+                var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), i);
                 _cells[i] = cell;
             }
         }
@@ -42,13 +35,10 @@ namespace Sudoku
 
         public Puzzle UpdateCell(Cell newValue)
         {
-            var row = newValue.Row;
-            var col = newValue.Column;
-
             var newCells = new Cell[LineLength * LineLength];
             Array.Copy(_cells, newCells, _cells.Length);
 
-            newCells[row * LineLength + col] = newValue;
+            newCells[newValue.Index] = newValue;
 
             return new Puzzle(newCells);
         }
@@ -60,10 +50,7 @@ namespace Sudoku
 
             foreach (var cell in newValues)
             {
-                var row = cell.Row;
-                var col = cell.Column;
-
-                newCells[row * LineLength + col] = cell;
+                newCells[cell.Index] = cell;
             }
 
             return new Puzzle(newCells);
@@ -223,15 +210,7 @@ namespace Sudoku
             {
                 foreach (var cell in _cells)
                 {
-                    builder.AppendFormat("R{0}C{1}: ", cell.Row, cell.Column);
-                    for (var i = 0; i < LineLength; i++)
-                    {
-                        var digitValue = 1 << i;
-                        if ((cell.Value & digitValue) > 0)
-                        {
-                            builder.Append(i + 1);
-                        }
-                    }
+                    builder.AppendFormat("R{0}C{1}: {2}", cell.Row, cell.Column, string.Join("", cell.Value.ToHumanOptions()));
                     builder.AppendLine();
                 }
             }
