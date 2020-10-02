@@ -28,7 +28,7 @@ namespace Sudoku
             {
                 new NakedSingleStrategy(),
                 new SinglePositionStrategy(),
-                new PairStrategy(),
+                new TupleStrategy(),
             })
         {
         }
