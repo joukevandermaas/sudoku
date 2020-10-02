@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Sudoku
@@ -14,39 +15,43 @@ namespace Sudoku
 
     class Solver
     {
-        private Puzzle _puzzle;
         private readonly ISolveStrategy[] _strategies;
         private readonly int _maxSteps;
-        private readonly bool _logging;
+        private readonly int _maxBruteForceDepth;
 
-        public Solver(Puzzle puzzle)
-            : this(puzzle, 100, true)
+        public Solver()
+            : this(maxSteps: 100, maxBruteForceDepth: 0)
         {
         }
 
-        public Solver(Puzzle puzzle, int maxSteps, bool logging)
-            : this(puzzle, maxSteps, logging, new ISolveStrategy[]
-            { 
+        public Solver(int maxSteps, int maxBruteForceDepth)
+            : this(maxSteps, maxBruteForceDepth, new ISolveStrategy[]
+            {
                 new NakedSingleStrategy(),
-                new SinglePositionStrategy(),
-                new BruteForceStrategy()
+                new SinglePositionStrategy()
             })
         {
         }
 
-        public Solver(Puzzle puzzle, int maxSteps, bool logging, IEnumerable<ISolveStrategy> strategies)
+        public Solver(int maxSteps, int maxBruteForceDepth, IEnumerable<ISolveStrategy> strategies)
         {
-            _puzzle = puzzle;
             _strategies = strategies.ToArray();
             _maxSteps = maxSteps;
-            _logging = logging;
+            _maxBruteForceDepth = maxBruteForceDepth;
         }
 
-        public (SolveResult, Puzzle) Solve()
+        public (SolveResult, Puzzle) Solve(Puzzle puzzle)
+        {
+            return Solve(puzzle, 1);
+        }
+
+        private (SolveResult, Puzzle) Solve(Puzzle puzzle, int bruteForceDepth)
         {
             var actualSteps = 0;
 
-            while (!_puzzle.IsSolved && !_puzzle.IsInvalid)
+            var watch = Stopwatch.StartNew();
+
+            while (!puzzle.IsSolved && puzzle.IsValid)
             {
                 if (actualSteps >= _maxSteps)
                 {
@@ -56,17 +61,12 @@ namespace Sudoku
                 var anySuccess = false;
                 foreach (var strat in _strategies)
                 {
-                    var (success, newPuzzle) = strat.Apply(_puzzle);
-
-                    if (_logging)
-                    {
-                        Console.WriteLine("Ran {0}. Result: {1}", strat.GetType(), success);
-                    }
+                    var (success, newPuzzle) = strat.Apply(puzzle);
+                    puzzle = newPuzzle;
 
                     if (success)
                     {
                         anySuccess = true;
-                        _puzzle = newPuzzle;
                         break;
                     }
                 }
@@ -75,36 +75,70 @@ namespace Sudoku
 
                 if (!anySuccess)
                 {
-                    break;
-                }
+                    var (success, newPuzzle) = AttemptBruteForce(puzzle, bruteForceDepth);
+                    puzzle = newPuzzle;
 
-                if (_logging)
-                {
-                    Console.WriteLine(_puzzle);
+                    if (!success)
+                    {
+                        break;
+                    }
                 }
             }
+
+            watch.Stop();
 
             SolveResult result;
 
-            if (_puzzle.IsSolved)
+            if (puzzle.IsSolved)
             {
                 result = SolveResult.Success;
-                if (_logging)
-                {
-                    Console.WriteLine("Solved after {0} steps.", actualSteps);
-                }
             }
             else
             {
-                if (_logging)
-                {
-                    Console.WriteLine("Could not solve after {0} steps.", actualSteps);
-                }
-
-                result = _puzzle.IsInvalid ? SolveResult.Invalid : SolveResult.Failure;
+                result = !puzzle.IsValid ? SolveResult.Invalid : SolveResult.Failure;
             }
 
-            return (result, _puzzle);
+            return (result, puzzle);
+        }
+
+        private (bool, Puzzle) AttemptBruteForce(Puzzle puzzle, int depth)
+        {
+            if (depth > _maxBruteForceDepth)
+            {
+                return (false, puzzle);
+            }
+
+            var cells = puzzle.Cells;
+
+            foreach (var cell in cells)
+            {
+                var options = cell.Value.GetOptions().ToList();
+
+                if (options.Count != 2)
+                {
+                    continue;
+                }
+
+                var newCell = cell.SetValue(options[0]);
+                var newPuzzle = puzzle.UpdateCell(newCell);
+
+                var (result, resultPuzzle) = Solve(newPuzzle, depth + 1);
+
+                if (result == SolveResult.Success)
+                {
+                    return (true, resultPuzzle);
+                }
+                else if (result == SolveResult.Invalid)
+                {
+                    // it must be the other option
+                    var correctCell = cell.SetValue(options[1]);
+                    return (true, puzzle.UpdateCell(correctCell));
+                }
+            }
+
+            // didn't find any cell to brute force, or there
+            // was no outcome
+            return (false, puzzle);
         }
     }
 }

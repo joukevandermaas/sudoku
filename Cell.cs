@@ -12,7 +12,7 @@ namespace Sudoku
         public int Column => Index % Puzzle.LineLength;
 
         public bool IsResolved => Value.IsSingle;
-        public bool IsInvalid => Value == SudokuValues.None;
+        public bool IsValid => Value != SudokuValues.None;
 
         public Cell RemoveOptions(SudokuValues options)
         {
@@ -39,7 +39,7 @@ namespace Sudoku
 
         public override bool Equals(object? obj) => obj is Cell other && Equals(other);
 
-        public bool Equals(Cell other) => other.Value == Value;
+        public bool Equals(Cell other) => other.Value == Value && other.Index == Index;
 
         public override string ToString() => ToString(false);
 
@@ -50,6 +50,6 @@ namespace Sudoku
             return IsResolved ? Value.ToString() : empty;
         }
 
-        public override int GetHashCode() => HashCode.Combine(Value);
+        public override int GetHashCode() => HashCode.Combine(Value, Index);
     }
 }
