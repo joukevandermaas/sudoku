@@ -11,64 +11,41 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
-            var updatedValues = new List<Cell>();
-
-            ScanContainers(puzzle.GetRows(), updatedValues);
-
-            if (updatedValues.Count > 0)
-            {
-                return (true, puzzle.UpdateCells(updatedValues));
-            }
-
-            ScanContainers(puzzle.GetColumns(), updatedValues);
-
-            if (updatedValues.Count > 0)
-            {
-                return (true, puzzle.UpdateCells(updatedValues));
-            }
-
-            ScanContainers(puzzle.GetBoxes(), updatedValues);
-
-            if (updatedValues.Count > 0)
-            {
-                return (true, puzzle.UpdateCells(updatedValues));
-            }
-
-            return (false, puzzle);
+            return puzzle.ForEveryRegion(ScanRegion);
         }
 
-        private static void ScanContainers(IEnumerable<IEnumerable<Cell>> containers, List<Cell> updatedValues)
+        private static List<Cell> ScanRegion(Region region)
         {
-            foreach (var container in containers)
+            var counts = new int[Puzzle.LineLength];
+            var cells = new Cell[Puzzle.LineLength];
+            var result = new List<Cell>();
+
+            foreach (var cell in region)
             {
-                var counts = new int[Puzzle.LineLength];
-                var cells = new Cell[Puzzle.LineLength];
-
-                foreach (var cell in container)
+                if (cell.IsResolved)
                 {
-                    if (cell.IsResolved)
-                    {
-                        continue;
-                    }
-
-                    var options = cell.Value.ToHumanOptions();
-
-                    foreach (var option in options)
-                    {
-                        counts[option - 1] += 1;
-                        cells[option - 1] = cell;
-                    }
+                    continue;
                 }
 
-                for (var i = 0; i < counts.Length; i++)
+                var options = cell.Value.ToHumanOptions();
+
+                foreach (var option in options)
                 {
-                    if (counts[i] == 1)
-                    {
-                        var newCell = cells[i].SetValue(SudokuValues.FromHumanValue(i + 1));
-                        updatedValues.Add(newCell);
-                    }
+                    counts[option - 1] += 1;
+                    cells[option - 1] = cell;
                 }
             }
+
+            for (var i = 0; i < counts.Length; i++)
+            {
+                if (counts[i] == 1)
+                {
+                    var newCell = cells[i].SetValue(SudokuValues.FromHumanValue(i + 1));
+                    result.Add(newCell);
+                }
+            }
+
+            return result;
         }
     }
 }

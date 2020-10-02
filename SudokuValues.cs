@@ -32,8 +32,6 @@ namespace Sudoku
 
         public bool IsSingle => (Values & (Values - 1)) == 0 && Values != 0;
 
-        public int NumberOfOptions => GetOptions().Count();
-
         public SudokuValues RemoveOptions(SudokuValues options) => new SudokuValues(Values & (~options.Values));
         public SudokuValues AddOptions(SudokuValues options) => new SudokuValues(Values | options.Values);
         public bool HasAnyOptions(SudokuValues options) => (Values & options.Values) != 0;
@@ -55,6 +53,20 @@ namespace Sudoku
                     yield return option;
                 }
             }
+        }
+
+        public int GetOptionCount()
+        {
+            var count = 0;
+            for (int i = 1; i <= Puzzle.LineLength; i++)
+            {
+                var option = SudokuValues.FromHumanValue(i);
+                if (HasAnyOptions(option))
+                {
+                    count += 1;
+                }
+            }
+            return count;
         }
 
         public static bool operator ==(SudokuValues left, SudokuValues right) => left.Equals(right);
