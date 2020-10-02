@@ -15,9 +15,6 @@ namespace Sudoku
 
         private readonly Cell[] _cells;
 
-        public bool IsSolved => _cells.All(c => c.IsResolved);
-        public bool IsInvalid => _cells.Any(c => c.IsInvalid);
-
         public Puzzle(string puzzle)
         {
             _cells = new Cell[LineLength * LineLength];
@@ -33,6 +30,47 @@ namespace Sudoku
         {
             _cells = cells;
         }
+
+        public bool IsSolved => _cells.All(c => c.IsResolved);
+
+        public bool IsValid
+        {
+            get
+            {
+                var allCellsValid = _cells.All(c => c.IsValid);
+
+                if (!allCellsValid)
+                {
+                    return false;
+                }
+
+                return GetRows().Concat(GetColumns()).Concat(GetBoxes()).All(IsContainerValid);
+
+                static bool IsContainerValid(IEnumerable<Cell> container)
+                {
+                    var values = SudokuValues.None;
+
+                    foreach (var cell in container)
+                    {
+                        if (cell.IsResolved)
+                        {
+                            if (values.HasAnyOptions(cell.Value))
+                            {
+                                // already found in this container, this is not valid
+                                return false;
+                            }
+
+                            values = values.AddOptions(cell.Value);
+                        }
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        public IEnumerable<Cell> Cells => _cells;
+
 
         public Puzzle UpdateCell(Cell newValue)
         {
@@ -56,6 +94,7 @@ namespace Sudoku
 
             return new Puzzle(newCells);
         }
+
         public IEnumerable<IEnumerable<Cell>> GetRows()
         {
             for (int i = 0; i < LineLength; i++)
@@ -142,8 +181,8 @@ namespace Sudoku
 
             var builder = new StringBuilder();
 
-            const bool printIndices = true;
-            const bool printPossibilities = true;
+            const bool printIndices = false;
+            const bool printPossibilities = false;
 
             if (printIndices)
             {
@@ -232,7 +271,6 @@ namespace Sudoku
                 rowNr += 1;
             }
         }
-
 
         public override int GetHashCode()
         {
