@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
@@ -44,28 +43,7 @@ namespace Sudoku
                     return false;
                 }
 
-                return GetRows().Concat(GetColumns()).Concat(GetBoxes()).All(IsContainerValid);
-
-                static bool IsContainerValid(IEnumerable<Cell> container)
-                {
-                    var values = SudokuValues.None;
-
-                    foreach (var cell in container)
-                    {
-                        if (cell.IsResolved)
-                        {
-                            if (values.HasAnyOptions(cell.Value))
-                            {
-                                // already found in this container, this is not valid
-                                return false;
-                            }
-
-                            values = values.AddOptions(cell.Value);
-                        }
-                    }
-
-                    return true;
-                }
+                return GetRows().Concat(GetColumns()).Concat(GetBoxes()).All(c => c.IsValid);
             }
         }
 
@@ -84,6 +62,9 @@ namespace Sudoku
 
         public Puzzle UpdateCells(IEnumerable<Cell> newValues)
         {
+            if (!newValues.Any())
+                return this;
+
             var newCells = new Cell[LineLength * LineLength];
             Array.Copy(_cells, newCells, _cells.Length);
 
@@ -95,64 +76,27 @@ namespace Sudoku
             return new Puzzle(newCells);
         }
 
-        public IEnumerable<IEnumerable<Cell>> GetRows()
+        public IEnumerable<Region> GetRows()
         {
             for (int i = 0; i < LineLength; i++)
             {
-                yield return GetRow(i);
+                yield return new Region(_cells, RegionType.Row, i);
             }
         }
 
-        public IEnumerable<IEnumerable<Cell>> GetColumns()
+        public IEnumerable<Region> GetColumns()
         {
             for (int i = 0; i < LineLength; i++)
             {
-                yield return GetColumn(i);
+                yield return new Region(_cells, RegionType.Column, i);
             }
         }
 
-        public IEnumerable<IEnumerable<Cell>> GetBoxes()
+        public IEnumerable<Region> GetBoxes()
         {
             for (int i = 0; i < LineLength; i++)
             {
-                yield return GetBox(i);
-            }
-        }
-
-        public IEnumerable<Cell> GetRow(int number) => GetRange(
-            start: number * LineLength,
-            end: (number + 1) * LineLength,
-            increment: 1);
-
-        public IEnumerable<Cell> GetColumn(int number) => GetRange(
-            start: number,
-            end: LineLength * LineLength + number,
-            increment: LineLength);
-
-        public IEnumerable<Cell> GetBox(int number)
-        {
-            var result = Enumerable.Empty<Cell>();
-
-            var boxRow = (number / BoxLength) * BoxLength; // note: integer division
-            var boxCol = (number % BoxLength) * BoxLength;
-
-            for (var i = 3; i > 0; i--)
-            {
-                var start = (boxRow + BoxLength - i) * LineLength + boxCol;
-
-                var slice = GetRange(start, start + BoxLength, 1);
-
-                result = result.Concat(slice);
-            }
-
-            return result;
-        }
-
-        private IEnumerable<Cell> GetRange(int start, int end, int increment)
-        {
-            for (var i = start; i < end; i += increment)
-            {
-                yield return _cells[i];
+                yield return new Region(_cells, RegionType.Box, i);
             }
         }
 
@@ -181,7 +125,7 @@ namespace Sudoku
 
             var builder = new StringBuilder();
 
-            const bool printIndices = false;
+            const bool printIndices = true;
             const bool printPossibilities = false;
 
             if (printIndices)
