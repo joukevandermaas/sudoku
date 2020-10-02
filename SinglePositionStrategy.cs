@@ -11,7 +11,7 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
-            return puzzle.ForEveryRegion(ScanRegion);
+            return puzzle.ForEveryRegion(ScanRegion, stopAtSuccess: true);
         }
 
         private static List<Cell> ScanRegion(Region region)
