@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Sudoku
@@ -28,7 +27,8 @@ namespace Sudoku
             : this(maxSteps, maxBruteForceDepth, new ISolveStrategy[]
             {
                 new NakedSingleStrategy(),
-                new SinglePositionStrategy()
+                new SinglePositionStrategy(),
+                new PairStrategy(),
             })
         {
         }
@@ -49,8 +49,6 @@ namespace Sudoku
         {
             var actualSteps = 0;
 
-            var watch = Stopwatch.StartNew();
-
             while (!puzzle.IsSolved && puzzle.IsValid)
             {
                 if (actualSteps >= _maxSteps)
@@ -58,24 +56,12 @@ namespace Sudoku
                     break;
                 }
 
-                var anySuccess = false;
-                foreach (var strat in _strategies)
+                var (success, newPuzzle, _) = Advance(puzzle);
+                puzzle = newPuzzle;
+
+                if (!success)
                 {
-                    var (success, newPuzzle) = strat.Apply(puzzle);
-                    puzzle = newPuzzle;
-
-                    if (success)
-                    {
-                        anySuccess = true;
-                        break;
-                    }
-                }
-
-                actualSteps += 1;
-
-                if (!anySuccess)
-                {
-                    var (success, newPuzzle) = AttemptBruteForce(puzzle, bruteForceDepth);
+                    (success, newPuzzle) = AttemptBruteForce(puzzle, bruteForceDepth);
                     puzzle = newPuzzle;
 
                     if (!success)
@@ -83,9 +69,8 @@ namespace Sudoku
                         break;
                     }
                 }
+                actualSteps += 1;
             }
-
-            watch.Stop();
 
             SolveResult result;
 
@@ -99,6 +84,22 @@ namespace Sudoku
             }
 
             return (result, puzzle);
+        }
+
+        public (bool, Puzzle, ISolveStrategy?) Advance(Puzzle puzzle)
+        {
+            foreach (var strat in _strategies)
+            {
+                var (success, newPuzzle) = strat.Apply(puzzle);
+                puzzle = newPuzzle;
+
+                if (success)
+                {
+                    return (true, puzzle, strat);
+                }
+            }
+
+            return (false, puzzle, null);
         }
 
         private (bool, Puzzle) AttemptBruteForce(Puzzle puzzle, int depth)

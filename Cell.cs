@@ -41,14 +41,7 @@ namespace Sudoku
 
         public bool Equals(Cell other) => other.Value == Value && other.Index == Index;
 
-        public override string ToString() => ToString(false);
-
-        public string ToString(bool full)
-        {
-            var empty = full ? " " : ".";
-
-            return IsResolved ? Value.ToString() : empty;
-        }
+        public override string ToString() => IsResolved ? Value.ToString() : ".";
 
         public override int GetHashCode() => HashCode.Combine(Value, Index);
     }
