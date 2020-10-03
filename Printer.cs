@@ -117,7 +117,7 @@ namespace Sudoku
             builder.AppendLine("<div class='container'>");
             indentation++;
 
-            foreach (var box in puzzle.GetBoxes())
+            foreach (var box in puzzle.Boxes)
             {
                 Indent();
                 builder.AppendLine("<section class='box'>");

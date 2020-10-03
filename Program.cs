@@ -17,7 +17,7 @@ namespace Sudoku
         static void Main(string[] args)
         {
             // left to right, top to bottom. 0 means empty
-            SolveSudoku(easy2);
+            SolveSudoku(veryEasy);
         }
 
         static void SolveSudoku(string sudoku)
@@ -29,13 +29,14 @@ namespace Sudoku
             var builder = new StringBuilder();
             builder.AppendLine(_htmlStart);
 
+            int step = 1;
             while (!puzzle.IsSolved && puzzle.IsValid)
             {
                 var (success, newPuzzle, strat) = solver.Advance(puzzle);
 
                 if (success)
                 {
-                    builder.AppendFormat("<h3>{0}</h3>", strat!.GetType());
+                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat!.GetType());
                     builder.AppendLine();
 
                     builder.AppendLine("<div class='step'>");
@@ -56,6 +57,8 @@ namespace Sudoku
 
                     break;
                 }
+
+                step++;
             }
 
             builder.AppendLine(puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid");

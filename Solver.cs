@@ -26,8 +26,6 @@ namespace Sudoku
         public Solver(int maxSteps, int maxBruteForceDepth)
             : this(maxSteps, maxBruteForceDepth, new ISolveStrategy[]
             {
-                new NakedSingleStrategy(),
-                new SinglePositionStrategy(),
                 new TupleStrategy(),
             })
         {
