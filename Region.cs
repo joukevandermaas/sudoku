@@ -15,20 +15,58 @@ namespace Sudoku
 
     struct Region : IEnumerable<Cell>
     {
-        private readonly Cell[] _cells;
+        private readonly Cell[] _allCells;
+        private readonly RegionType _type;
+        private readonly int _index;
 
         public Region(Cell[] cells, RegionType type, int index)
         {
-            _cells = (type switch
-            {
-                RegionType.Row => GetRow(cells, index),
-                RegionType.Column => GetColumn(cells, index),
-                RegionType.Box => GetBox(cells, index),
-                _ => throw new NotImplementedException(),
-            }).ToArray();
+            _allCells = cells;
+            _type = type;
+            _index = index;
         }
 
-        public Cell this[int i] => _cells[i];
+        public Cell this[int i]
+        {
+            get
+            {
+                switch (_type)
+                {
+                    case RegionType.Row:
+                        var rowIndex = (_index * Puzzle.LineLength) + i;
+                        return _allCells[rowIndex];
+
+                    case RegionType.Column:
+                        var colIndex = _index + (i * Puzzle.LineLength);
+                        return _allCells[colIndex];
+
+                    case RegionType.Box:
+                        var insideBoxRow = i / Puzzle.BoxLength;
+                        var insideBoxCol = i % Puzzle.BoxLength;
+
+                        var outsideBoxRow = _index / Puzzle.BoxLength;
+                        var outsideBoxCol = _index % Puzzle.BoxLength;
+
+                        var row = outsideBoxRow * Puzzle.BoxLength + insideBoxRow;
+                        var col = outsideBoxCol * Puzzle.BoxLength + insideBoxCol;
+
+                        var boxIndex = (row * Puzzle.LineLength) + col;
+                        return _allCells[boxIndex];
+
+                    default:
+                        throw new NotImplementedException();
+                }
+                // row
+            }
+        }
+
+        private IEnumerable<Cell> GetCells()
+        {
+            for (var i = 0; i < Puzzle.LineLength; i++)
+            {
+                yield return this[i];
+            }
+        }
 
         public bool IsValid
         {
@@ -36,7 +74,7 @@ namespace Sudoku
             {
                 var values = SudokuValues.None;
 
-                foreach (var cell in _cells)
+                foreach (var cell in GetCells())
                 {
                     if (cell.IsResolved)
                     {
@@ -54,53 +92,8 @@ namespace Sudoku
             }
         }
 
-        private static IEnumerable<Cell> GetRow(Cell[] cells, int number) => GetRange(
-            cells,
-            start: number * Puzzle.LineLength,
-            end: (number + 1) * Puzzle.LineLength,
-            increment: 1);
+        public IEnumerator<Cell> GetEnumerator() => GetCells().GetEnumerator();
 
-        private static IEnumerable<Cell> GetColumn(Cell[] cells, int number) => GetRange(
-            cells,
-            start: number,
-            end: Puzzle.LineLength * Puzzle.LineLength + number,
-            increment: Puzzle.LineLength);
-
-        private static IEnumerable<Cell> GetBox(Cell[] cells, int number)
-        {
-            var result = Enumerable.Empty<Cell>();
-
-            var boxRow = (number / Puzzle.BoxLength) * Puzzle.BoxLength; // note: integer division
-            var boxCol = (number % Puzzle.BoxLength) * Puzzle.BoxLength;
-
-            for (var i = 3; i > 0; i--)
-            {
-                var start = (boxRow + Puzzle.BoxLength - i) * Puzzle.LineLength + boxCol;
-
-                var slice = GetRange(cells, start, start + Puzzle.BoxLength, 1);
-
-                result = result.Concat(slice);
-            }
-
-            return result;
-        }
-
-        private static IEnumerable<Cell> GetRange(Cell[] cells, int start, int end, int increment)
-        {
-            for (var i = start; i < end; i += increment)
-            {
-                yield return cells[i];
-            }
-        }
-
-        public IEnumerator<Cell> GetEnumerator()
-        {
-            return (_cells as IEnumerable<Cell>).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _cells.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetCells().GetEnumerator();
     }
 }

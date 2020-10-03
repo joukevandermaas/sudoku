@@ -25,7 +25,7 @@ namespace Sudoku
             }
         }
 
-        private Puzzle(Cell[] cells)
+        public Puzzle(Cell[] cells)
         {
             _cells = cells;
         }
@@ -43,7 +43,7 @@ namespace Sudoku
                     return false;
                 }
 
-                return GetRows().Concat(GetColumns()).Concat(GetBoxes()).All(c => c.IsValid);
+                return Rows.Concat(Columns).Concat(Boxes).All(c => c.IsValid);
             }
         }
 
@@ -76,27 +76,36 @@ namespace Sudoku
             return new Puzzle(newCells);
         }
 
-        public IEnumerable<Region> GetRows()
+        public IEnumerable<Region> Rows
         {
-            for (int i = 0; i < LineLength; i++)
+            get
             {
-                yield return new Region(_cells, RegionType.Row, i);
+                for (int i = 0; i < LineLength; i++)
+                {
+                    yield return new Region(_cells, RegionType.Row, i);
+                }
             }
         }
 
-        public IEnumerable<Region> GetColumns()
+        public IEnumerable<Region> Columns
         {
-            for (int i = 0; i < LineLength; i++)
+            get
             {
-                yield return new Region(_cells, RegionType.Column, i);
+                for (int i = 0; i < LineLength; i++)
+                {
+                    yield return new Region(_cells, RegionType.Column, i);
+                }
             }
         }
 
-        public IEnumerable<Region> GetBoxes()
+        public IEnumerable<Region> Boxes
         {
-            for (int i = 0; i < LineLength; i++)
+            get
             {
-                yield return new Region(_cells, RegionType.Box, i);
+                for (int i = 0; i < LineLength; i++)
+                {
+                    yield return new Region(_cells, RegionType.Box, i);
+                }
             }
         }
 

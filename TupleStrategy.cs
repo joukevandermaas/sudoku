@@ -5,46 +5,51 @@ using System.Linq;
 namespace Sudoku
 {
     /// <summary>
-    /// Finds pairs, triples and quadruples of digits, removes those from other cells in the region
+    /// Finds singles, pairs, triples and quadruples of digits, removes those from other cells in the region
     /// note that quintuples and higher always correspond to one of the above tuples in the other cells
     /// </summary>
     internal class TupleStrategy : ISolveStrategy
     {
-        private static List<Cell> EmptyList = new List<Cell>();
-
-
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
-            var tupleSuccess = false;
-            var tripleSuccess = false;
-            var quadrupleSuccess = false;
+            // we copy the cells so we can mutate the array directly
+            var cells = puzzle.Cells.ToArray();
 
-            (tupleSuccess, puzzle) = puzzle.ForEveryRegion(r => ScanRegion(r, 2));
-            (tripleSuccess, puzzle) = puzzle.ForEveryRegion(r => ScanRegion(r, 2));
-            (quadrupleSuccess, puzzle) = puzzle.ForEveryRegion(r => ScanRegion(r, 2));
-
-            return (tupleSuccess || tripleSuccess || quadrupleSuccess, puzzle);
-        }
-
-        private static List<Cell> ScanRegion(Region region, int tupleSize)
-        {
-            var result = new List<Cell>();
-
-            var emptyCells = region.Where(c => !c.IsResolved).ToArray();
-
-            if (emptyCells.Length <= tupleSize)
+            var anySuccess = false;
+            for (int tupleSize = 1; tupleSize <= 4; tupleSize++)
             {
-                return EmptyList;
+                for (int i = 0; i < Puzzle.LineLength; i++)
+                {
+                    var row = new Region(cells, RegionType.Row, i);
+                    anySuccess = ScanRegion(cells, row, tupleSize) || anySuccess;
+
+                    var col = new Region(cells, RegionType.Column, i);
+                    anySuccess = ScanRegion(cells, col, tupleSize) || anySuccess;
+
+                    var box = new Region(cells, RegionType.Box, i);
+                    anySuccess = ScanRegion(cells, box, tupleSize) || anySuccess;
+                }
             }
 
-            var combinations = GetCombinations(emptyCells, tupleSize);
+            puzzle = new Puzzle(cells);
+
+            return (anySuccess, puzzle);
+        }
+
+        private static bool ScanRegion(Cell[] cells, Region region, int tupleSize)
+        {
+            var changedAnyCells = false;
+
+            var combinations = GetCombinationIndices(tupleSize);
 
             foreach (var combination in combinations)
             {
                 var possibleValues = SudokuValues.None;
 
-                foreach (var cell in combination)
+                foreach (var index in combination)
                 {
+                    var cell = region[index];
+
                     possibleValues = possibleValues.AddOptions(cell.Value);
                 }
 
@@ -54,9 +59,11 @@ namespace Sudoku
                 {
                     // we found a tuple!
 
-                    foreach (var otherCell in region)
+                    for (var i = 0; i < Puzzle.LineLength; i++)
                     {
-                        if (otherCell.IsResolved || combination.Contains(otherCell))
+                        var otherCell = region[i];
+
+                        if (otherCell.IsResolved || combination.Contains(i))
                         {
                             continue;
                         }
@@ -66,43 +73,36 @@ namespace Sudoku
                             continue;
                         }
 
-                        result.Add(otherCell.RemoveOptions(possibleValues));
+                        cells[otherCell.Index] = otherCell.RemoveOptions(possibleValues);
+                        changedAnyCells = true;
                     }
                 }
             }
 
-            return result;
+            return changedAnyCells;
         }
 
-        // copied from stack overflow.. it can use some improvement but it's fine for now
-        public static IEnumerable<Cell[]> GetCombinations(Cell[] items, int m)
+        private static IEnumerable<int[]> GetCombinationIndices(int tupleSize)
         {
-            Cell[] result = new Cell[m];
-            foreach (int[] j in GetIndices(m, items.Length))
-            {
-                for (int i = 0; i < m; i++)
-                {
-                    result[i] = items[j[i]];
-                }
-                yield return result;
-            }
+            return GetCombinationsHelper(0, new int[0], tupleSize);
         }
-        private static IEnumerable<int[]> GetIndices(int m, int n)
+
+        private static IEnumerable<int[]> GetCombinationsHelper(int startDigit, int[] previousDigits, int tupleSize)
         {
-            int[] result = new int[m];
-            Stack<int> stack = new Stack<int>(m);
-            stack.Push(0);
-            while (stack.Count > 0)
+            for (int i = startDigit; i < Puzzle.LineLength; i++)
             {
-                int index = stack.Count - 1;
-                int value = stack.Pop();
-                while (value < n)
+                var result = previousDigits.Concat(new[] { i }).ToArray();
+
+                if (result.Length == tupleSize)
                 {
-                    result[index++] = value++;
-                    stack.Push(value);
-                    if (index != m) continue;
                     yield return result;
-                    break;
+                }
+                else
+                {
+                    foreach (var tuple in GetCombinationsHelper(i + 1, result, tupleSize))
+                    {
+                        yield return tuple;
+                    }
                 }
             }
         }
