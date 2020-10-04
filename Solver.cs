@@ -18,19 +18,6 @@ namespace Sudoku
         private readonly int _maxSteps;
         private readonly int _maxBruteForceDepth;
 
-        public Solver()
-            : this(maxSteps: 100, maxBruteForceDepth: 0)
-        {
-        }
-
-        public Solver(int maxSteps, int maxBruteForceDepth)
-            : this(maxSteps, maxBruteForceDepth, new ISolveStrategy[]
-            {
-                new TupleStrategy(),
-            })
-        {
-        }
-
         public Solver(int maxSteps, int maxBruteForceDepth, IEnumerable<ISolveStrategy> strategies)
         {
             _strategies = strategies.ToArray();

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,19 +11,52 @@ namespace Sudoku
         const string veryEasy = "090000070200070005500106008008907100000050000009308400600705004900060002040000010";
         const string moderate = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string easy2 = "094000130000000000000076002080010000032000000000200060000050400000008007006304008";
-        const string ctc = "000000012000000345000003670000081500000754000004230000067900000312000000850000000";
+        const string ctc1 = "000000012000000345000003670000081500000754000004230000067900000312000000850000000";
+        const string hard = "020500700600090000000000100010400002000083000070000000309000080000100000800000000";
+        const string ctc2 = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
+        const string ctc3 = "000490000008020004060500070054000600000000000009000580030002090500080300000073000";
+        const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
+
+        private static ISolveStrategy[] _strategies = new ISolveStrategy[]
+        {
+            new SingleStrategy(),
+            new OneOptionStrategy(),
+            new TupleStrategy(),
+            new BoxLayoutStrategy(),
+        };
 
         static void Main(string[] args)
         {
-            // left to right, top to bottom. 0 means empty
-            SolveSudoku(veryEasy);
+            const string puzzle = xwing;
+
+            if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
+            {
+                SolveDebug(puzzle);
+            }
+            else
+            {
+                SolveFast(puzzle);
+            }
         }
 
-        static void SolveSudoku(string sudoku)
+        static void SolveFast(string sudoku)
+        {
+            var puzzle = new Puzzle(sudoku);
+            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 3, _strategies);
+
+            var time = Stopwatch.StartNew();
+            var (result, solvedPuzzle) = solver.Solve(puzzle);
+            time.Stop();
+
+            Console.WriteLine(Printer.ForConsole(solvedPuzzle));
+            Console.WriteLine("{0} in {1}", result, time.Elapsed);
+        }
+
+        static void SolveDebug(string sudoku)
         {
             var puzzle = new Puzzle(sudoku);
 
-            var solver = new Solver();
+            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 0, _strategies);
 
             var builder = new StringBuilder();
             builder.AppendLine(_htmlStart);
@@ -40,8 +72,8 @@ namespace Sudoku
                     builder.AppendLine();
 
                     builder.AppendLine("<div class='step'>");
-                    builder.AppendLine(Printer.ForBrowser(puzzle));
-                    builder.AppendLine(Printer.ForBrowser(newPuzzle));
+                    builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
+                    builder.AppendLine(Printer.ForBrowser(newPuzzle, puzzle));
                     builder.AppendLine("</div>"); // step
 
                     puzzle = newPuzzle;
@@ -50,18 +82,18 @@ namespace Sudoku
                 }
                 else
                 {
-                    builder.AppendLine("<div class='step'>");
-                    builder.AppendLine(Printer.ForBrowser(puzzle));
-                    builder.AppendLine("</div>"); // step
-                    builder.AppendLine("<hr>");
-
+                    puzzle = newPuzzle;
                     break;
                 }
 
                 step++;
             }
 
-            builder.AppendLine(puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid");
+            builder.AppendFormat("<h3>{0}</h3>", puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid");
+            builder.AppendLine("<div class='step'>");
+            builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
+            builder.AppendLine("</div>"); // step
+
             builder.AppendLine(_htmlEnd);
 
             File.WriteAllText("test.html", builder.ToString());
@@ -114,6 +146,11 @@ body {
 
   border-right: 1px solid black;
   border-bottom: 1px solid black;
+}
+
+.cell.changed {
+  color: #1b74d3;
+  font-weight: bold;
 }
 
 .resolved .number {

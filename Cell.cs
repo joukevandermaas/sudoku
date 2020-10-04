@@ -10,6 +10,7 @@ namespace Sudoku
 
         public int Row => Index / Puzzle.LineLength;
         public int Column => Index % Puzzle.LineLength;
+        public int Box => ((Row / 3) * Puzzle.BoxLength) + (Column / 3);
 
         public bool IsResolved => Value.IsSingle;
         public bool IsValid => Value != SudokuValues.None;
@@ -27,6 +28,8 @@ namespace Sudoku
 
             return new Cell(value, Index);
         }
+
+        public bool HasOptions(SudokuValues options) => !IsResolved && Value.HasAnyOptions(options);
 
         public Cell(SudokuValues value, int index)
         {

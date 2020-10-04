@@ -16,36 +16,38 @@ namespace Sudoku
     struct Region : IEnumerable<Cell>
     {
         private readonly Cell[] _allCells;
-        private readonly RegionType _type;
-        private readonly int _index;
 
         public Region(Cell[] cells, RegionType type, int index)
         {
             _allCells = cells;
-            _type = type;
-            _index = index;
+            Type = type;
+            Index = index;
         }
+
+        public RegionType Type { get; }
+
+        public int Index { get; }
 
         public Cell this[int i]
         {
             get
             {
-                switch (_type)
+                switch (Type)
                 {
                     case RegionType.Row:
-                        var rowIndex = (_index * Puzzle.LineLength) + i;
+                        var rowIndex = (Index * Puzzle.LineLength) + i;
                         return _allCells[rowIndex];
 
                     case RegionType.Column:
-                        var colIndex = _index + (i * Puzzle.LineLength);
+                        var colIndex = Index + (i * Puzzle.LineLength);
                         return _allCells[colIndex];
 
                     case RegionType.Box:
                         var insideBoxRow = i / Puzzle.BoxLength;
                         var insideBoxCol = i % Puzzle.BoxLength;
 
-                        var outsideBoxRow = _index / Puzzle.BoxLength;
-                        var outsideBoxCol = _index % Puzzle.BoxLength;
+                        var outsideBoxRow = Index / Puzzle.BoxLength;
+                        var outsideBoxCol = Index % Puzzle.BoxLength;
 
                         var row = outsideBoxRow * Puzzle.BoxLength + insideBoxRow;
                         var col = outsideBoxCol * Puzzle.BoxLength + insideBoxCol;
@@ -56,7 +58,6 @@ namespace Sudoku
                     default:
                         throw new NotImplementedException();
                 }
-                // row
             }
         }
 
