@@ -85,6 +85,13 @@ namespace Sudoku
         public Region GetBox(int index) => GetRegion(RegionType.Box, index);
 
         public Region GetRegion(RegionType type, int index) => new Region(_cells, type, index);
+        public IEnumerable<Region> GetRegions(RegionType type) => type switch
+        {
+            RegionType.Row => Rows,
+            RegionType.Column => Columns,
+            RegionType.Box => Boxes,
+            _ => throw new NotImplementedException(),
+        };
 
         public IEnumerable<Region> Rows
         {

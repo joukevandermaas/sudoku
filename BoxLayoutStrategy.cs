@@ -16,9 +16,9 @@ namespace Sudoku
             {
                 var boxIndex = box[0].Box;
 
-                for (int i = 1; i <= Puzzle.LineLength; i++)
+                for (int digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
-                    var value = SudokuValues.FromHumanValue(i);
+                    var value = SudokuValues.FromHumanValue(digit);
                     var rowUnique = true;
                     var colUnique = true;
                     var row = -1;
@@ -63,6 +63,7 @@ namespace Sudoku
 
                         if (updates.Any())
                         {
+                            Program.HighlightDigit = digit;
                             return (true, puzzle.UpdateCells(updates));
                         }
                     }
@@ -81,6 +82,7 @@ namespace Sudoku
 
                         if (updates.Any())
                         {
+                            Program.HighlightDigit = digit;
                             return (true, puzzle.UpdateCells(updates));
                         }
                     }

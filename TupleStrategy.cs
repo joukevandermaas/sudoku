@@ -12,27 +12,24 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
-            // we copy the cells so we can mutate the array directly
-            var cells = puzzle.Cells.ToArray();
-
-            var anySuccess = false;
             for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
             {
                 foreach (var region in puzzle.Regions)
                 {
-                    anySuccess = ScanRegion(cells, region, tupleSize) || anySuccess;
+                    var (success, newPuzzle) = ScanRegion(puzzle, region, tupleSize);
+
+                    if (success)
+                    {
+                        return (true, newPuzzle);
+                    }
                 }
             }
 
-            puzzle = new Puzzle(cells);
-
-            return (anySuccess, puzzle);
+            return (false, puzzle);
         }
 
-        private bool ScanRegion(Cell[] cells, Region region, int tupleSize)
+        private (bool, Puzzle) ScanRegion(Puzzle puzzle, Region region, int tupleSize)
         {
-            var changedAnyCells = false;
-
             var combinations = GetCombinationIndices(tupleSize);
 
             foreach (var combination in combinations)
@@ -58,6 +55,8 @@ namespace Sudoku
                 {
                     // we found a tuple!
 
+                    var updatedCells = new List<Cell>();
+
                     for (var i = 0; i < Puzzle.LineLength; i++)
                     {
                         var otherCell = region[i];
@@ -72,13 +71,18 @@ namespace Sudoku
                             continue;
                         }
 
-                        cells[otherCell.Index] = otherCell.RemoveOptions(possibleValues);
-                        changedAnyCells = true;
+                        updatedCells.Add(otherCell.RemoveOptions(possibleValues));
+                    }
+
+                    if (updatedCells.Any())
+                    {
+                        Program.DebugText = $"{possibleValues} tuple in {region}.";
+                        return (true, puzzle.UpdateCells(updatedCells));
                     }
                 }
             }
 
-            return changedAnyCells;
+            return (false, puzzle);
         }
 
         private static IEnumerable<int[]> GetCombinationIndices(int tupleSize)

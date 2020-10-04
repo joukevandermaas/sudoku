@@ -93,6 +93,11 @@ namespace Sudoku
             }
         }
 
+        public override string ToString()
+        {
+            return $"{Type} {Index + 1}";
+        }
+
         public IEnumerator<Cell> GetEnumerator() => GetCells().GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetCells().GetEnumerator();

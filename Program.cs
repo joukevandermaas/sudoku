@@ -18,18 +18,21 @@ namespace Sudoku
         const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
         const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
 
+        public static int HighlightDigit = 0;
+        public static string DebugText = string.Empty;
+
         private static ISolveStrategy[] _strategies = new ISolveStrategy[]
         {
             new SingleStrategy(),
             new OneOptionStrategy(),
             new TupleStrategy(),
             new BoxLayoutStrategy(),
-            new XWingStrategy(),
+            new SwordfishStrategy(),
         };
 
         static void Main(string[] args)
         {
-            const string puzzle = ctc2;
+            const string puzzle = ctc3;
 
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
@@ -66,15 +69,22 @@ namespace Sudoku
             int step = 1;
             while (!puzzle.IsSolved && puzzle.IsValid)
             {
+                HighlightDigit = 0;
+                DebugText = string.Empty;
+
                 var (success, newPuzzle, strat) = solver.Advance(puzzle);
 
                 if (success)
                 {
                     builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat!.GetType());
+                    if (!string.IsNullOrEmpty(DebugText))
+                    {
+                        builder.AppendFormat("<p>{0}</p>", DebugText);
+                    }
                     builder.AppendLine();
 
                     builder.AppendLine("<div class='step'>");
-                    builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
+                    builder.AppendLine(Printer.ForBrowser(puzzle, puzzle, HighlightDigit));
                     builder.AppendLine(Printer.ForBrowser(newPuzzle, puzzle));
                     builder.AppendLine("</div>"); // step
 
@@ -125,7 +135,7 @@ body {
 
 .container {
   width: 540px;
-  margin: 60px;
+  margin: 60px 30px;
   display: grid;
   grid-template-columns: repeat(3, 180px);
   grid-template-rows: repeat(3, 180px);
