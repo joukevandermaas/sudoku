@@ -8,14 +8,15 @@ namespace Sudoku
 {
     class Program
     {
-        const string veryEasy = "090000070200070005500106008008907100000050000009308400600705004900060002040000010";
         const string moderate = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string easy2 = "094000130000000000000076002080010000032000000000200060000050400000008007006304008";
+
+        const string veryEasy = "090000070200070005500106008008907100000050000009308400600705004900060002040000010";
         const string ctc1 = "000000012000000345000003670000081500000754000004230000067900000312000000850000000";
-        const string hard = "020500700600090000000000100010400002000083000070000000309000080000100000800000000";
         const string ctc2 = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
         const string ctc3 = "000490000008020004060500070054000600000000000009000580030002090500080300000073000";
         const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
+        const string hard = "020500700600090000000000100010400002000083000070000000309000080000100000800000000";
         const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
 
         public static int HighlightDigit = 0;
@@ -26,13 +27,14 @@ namespace Sudoku
             new SingleStrategy(),
             new OneOptionStrategy(),
             new TupleStrategy(),
+            new HiddenTupleStrategy(),
             new BoxLayoutStrategy(),
             new SwordfishStrategy(),
         };
 
         static void Main(string[] args)
         {
-            const string puzzle = ctc3;
+            const string puzzle = easy2;
 
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
@@ -101,7 +103,13 @@ namespace Sudoku
                 step++;
             }
 
-            builder.AppendFormat("<h3>{0}</h3>", puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid");
+            var status = puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid";
+            builder.AppendFormat("<h3>{0}</h3>", status);
+
+            builder.AppendLine("<div class='step'>");
+            builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
+            builder.AppendLine("</div>"); // step
+
             for (int i = 1; i <= Puzzle.LineLength; i++)
             {
                 builder.AppendLine("<div class='step'>");
@@ -112,6 +120,9 @@ namespace Sudoku
             builder.AppendLine(_htmlEnd);
 
             File.WriteAllText("test.html", builder.ToString());
+
+            Console.WriteLine(Printer.ForConsole(puzzle));
+            Console.WriteLine(status);
         }
 
         private const string _htmlStart = @"<!doctype html>

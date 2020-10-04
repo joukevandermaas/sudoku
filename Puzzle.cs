@@ -64,9 +64,6 @@ namespace Sudoku
 
         public Puzzle UpdateCells(IEnumerable<Cell> newValues)
         {
-            if (!newValues.Any())
-                return this;
-
             var newCells = new Cell[LineLength * LineLength];
             Array.Copy(_cells, newCells, _cells.Length);
 

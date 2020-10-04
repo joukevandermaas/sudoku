@@ -30,7 +30,7 @@ namespace Sudoku
 
         private (bool, Puzzle) ScanRegion(Puzzle puzzle, Region region, int tupleSize)
         {
-            var combinations = GetCombinationIndices(tupleSize);
+            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
 
             foreach (var combination in combinations)
             {
@@ -83,31 +83,6 @@ namespace Sudoku
             }
 
             return (false, puzzle);
-        }
-
-        private static IEnumerable<int[]> GetCombinationIndices(int tupleSize)
-        {
-            return GetCombinationsHelper(0, new int[0], tupleSize);
-        }
-
-        private static IEnumerable<int[]> GetCombinationsHelper(int startDigit, int[] previousDigits, int tupleSize)
-        {
-            for (int i = startDigit; i < Puzzle.LineLength; i++)
-            {
-                var result = previousDigits.Concat(new[] { i }).ToArray();
-
-                if (result.Length == tupleSize)
-                {
-                    yield return result;
-                }
-                else
-                {
-                    foreach (var tuple in GetCombinationsHelper(i + 1, result, tupleSize))
-                    {
-                        yield return tuple;
-                    }
-                }
-            }
         }
     }
 }

@@ -40,7 +40,7 @@ namespace Sudoku
 
             foreach (var region in puzzle.GetRegions(type))
             {
-                var positions = GetPositions(region, value);
+                var positions = region.GetPositions(value);
                 var count = positions.GetOptionCount();
 
                 if (count > 1 && count <= fishSize)
@@ -55,9 +55,9 @@ namespace Sudoku
                 return (false, puzzle);
             }
 
-            var combinations = GetCombinationIndices(potentialRegions.Count, fishSize).ToArray();
+            var combinations = Helpers.GetCombinationIndices(potentialRegions.Count, fishSize).ToArray();
             var combinedPositions = SudokuValues.None;
-            List<Region> regions = null;
+            List<Region>? regions = null;
 
             for (int i = 0; i < combinations.Length; i++)
             {
@@ -100,52 +100,11 @@ namespace Sudoku
             if (updatedCells.Any())
             {
                 Program.HighlightDigit = digit;
-                Program.DebugText = $"Fish size: {fishSize}. Regions: {string.Join(", ", regions)}.";
+                Program.DebugText = $"Fish of size {fishSize} in {string.Join(", ", regions)}.";
                 return (true, puzzle.UpdateCells(updatedCells));
             }
 
             return (false, puzzle);
-        }
-
-        private SudokuValues GetPositions(Region region, SudokuValues digits)
-        {
-            var positions = SudokuValues.None;
-
-            for (var i = 0; i < Puzzle.LineLength; i++)
-            {
-                var cell = region[i];
-                if (cell.HasOptions(digits))
-                {
-                    positions = positions.AddOptions(SudokuValues.FromHumanValue(i + 1));
-                }
-            }
-
-            return positions;
-        }
-
-        private static IEnumerable<int[]> GetCombinationIndices(int count, int tupleSize)
-        {
-            return GetCombinationsHelper(count, 0, new int[0], tupleSize);
-        }
-
-        private static IEnumerable<int[]> GetCombinationsHelper(int count, int startDigit, int[] previousDigits, int tupleSize)
-        {
-            for (int i = startDigit; i < count; i++)
-            {
-                var result = previousDigits.Concat(new[] { i }).ToArray();
-
-                if (result.Length == tupleSize)
-                {
-                    yield return result;
-                }
-                else
-                {
-                    foreach (var tuple in GetCombinationsHelper(count, i + 1, result, tupleSize))
-                    {
-                        yield return tuple;
-                    }
-                }
-            }
         }
     }
 }
