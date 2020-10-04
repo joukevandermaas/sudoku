@@ -108,7 +108,7 @@ namespace Sudoku
             }
         }
 
-        public static string ForBrowser(Puzzle puzzle)
+        public static string ForBrowser(Puzzle puzzle, Puzzle previous)
         {
             var builder = new StringBuilder();
             int indentation = 0;
@@ -125,8 +125,12 @@ namespace Sudoku
 
                 foreach (var cell in box)
                 {
+                    var hasChanged = cell != previous[cell.Index];
+
                     Indent();
-                    builder.AppendFormat("<div class='cell {0}'>", cell.IsResolved ? "resolved" : "options");
+                    builder.AppendFormat("<div class='cell {0} {1}'>",
+                        cell.IsResolved ? "resolved" : "options",
+                        hasChanged ? "changed" : "");
                     builder.AppendLine();
                     indentation++;
 

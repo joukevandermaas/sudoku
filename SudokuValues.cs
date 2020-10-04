@@ -76,7 +76,7 @@ namespace Sudoku
 
         public bool Equals(SudokuValues other) => other.Values == Values;
 
-        public override string ToString() => IsSingle ? ToHumanValue().ToString() : ".";
+        public override string ToString() => IsSingle ? ToHumanValue().ToString() : string.Join(",", ToHumanOptions());
 
         public override int GetHashCode() => HashCode.Combine(Values);
     }

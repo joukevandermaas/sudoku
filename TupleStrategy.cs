@@ -5,7 +5,7 @@ using System.Linq;
 namespace Sudoku
 {
     /// <summary>
-    /// Finds singles, pairs, triples and quadruples of digits, removes those from other cells in the region
+    /// Finds pairs, triples and quadruples of digits, removes those from other cells in the region
     /// note that quintuples and higher always correspond to one of the above tuples in the other cells
     /// </summary>
     internal class TupleStrategy : ISolveStrategy
@@ -16,18 +16,11 @@ namespace Sudoku
             var cells = puzzle.Cells.ToArray();
 
             var anySuccess = false;
-            for (int tupleSize = 1; tupleSize <= 4; tupleSize++)
+            for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
             {
-                for (int i = 0; i < Puzzle.LineLength; i++)
+                foreach (var region in puzzle.Regions)
                 {
-                    var row = new Region(cells, RegionType.Row, i);
-                    anySuccess = ScanRegion(cells, row, tupleSize) || anySuccess;
-
-                    var col = new Region(cells, RegionType.Column, i);
-                    anySuccess = ScanRegion(cells, col, tupleSize) || anySuccess;
-
-                    var box = new Region(cells, RegionType.Box, i);
-                    anySuccess = ScanRegion(cells, box, tupleSize) || anySuccess;
+                    anySuccess = ScanRegion(cells, region, tupleSize) || anySuccess;
                 }
             }
 
@@ -36,7 +29,7 @@ namespace Sudoku
             return (anySuccess, puzzle);
         }
 
-        private static bool ScanRegion(Cell[] cells, Region region, int tupleSize)
+        private bool ScanRegion(Cell[] cells, Region region, int tupleSize)
         {
             var changedAnyCells = false;
 
@@ -44,6 +37,12 @@ namespace Sudoku
 
             foreach (var combination in combinations)
             {
+                if (combination.Select(i => region[i]).Any(c => c.IsResolved))
+                { 
+                    // skip any combinations of cells that are already resolved
+                    continue;
+                }
+
                 var possibleValues = SudokuValues.None;
 
                 foreach (var index in combination)

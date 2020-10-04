@@ -32,6 +32,9 @@ namespace Sudoku
 
         public bool IsSolved => _cells.All(c => c.IsResolved);
 
+        public Cell this[int i] => _cells[i];
+        public Cell this[int row, int col] => _cells[row * LineLength + col];
+
         public bool IsValid
         {
             get
@@ -48,7 +51,6 @@ namespace Sudoku
         }
 
         public IEnumerable<Cell> Cells => _cells;
-
 
         public Puzzle UpdateCell(Cell newValue)
         {
@@ -76,13 +78,19 @@ namespace Sudoku
             return new Puzzle(newCells);
         }
 
+        public IEnumerable<Region> Regions => Rows.Concat(Columns).Concat(Boxes);
+
+        public Region GetRow(int index) => new Region(_cells, RegionType.Row, index);
+        public Region GetColumn(int index) => new Region(_cells, RegionType.Column, index);
+        public Region GetBox(int index) => new Region(_cells, RegionType.Box, index);
+
         public IEnumerable<Region> Rows
         {
             get
             {
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return new Region(_cells, RegionType.Row, i);
+                    yield return GetRow(i);
                 }
             }
         }
@@ -93,7 +101,7 @@ namespace Sudoku
             {
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return new Region(_cells, RegionType.Column, i);
+                    yield return GetColumn(i);
                 }
             }
         }
@@ -104,7 +112,7 @@ namespace Sudoku
             {
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return new Region(_cells, RegionType.Box, i);
+                    yield return GetBox(i);
                 }
             }
         }
