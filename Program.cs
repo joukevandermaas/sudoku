@@ -29,7 +29,7 @@ namespace Sudoku
 
         static void Main(string[] args)
         {
-            const string puzzle = swordfish;
+            const string puzzle = ctc2;
 
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
@@ -92,9 +92,12 @@ namespace Sudoku
             }
 
             builder.AppendFormat("<h3>{0}</h3>", puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid");
-            builder.AppendLine("<div class='step'>");
-            builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
-            builder.AppendLine("</div>"); // step
+            for (int i = 1; i <= Puzzle.LineLength; i++)
+            {
+                builder.AppendLine("<div class='step'>");
+                builder.AppendLine(Printer.ForBrowser(puzzle, puzzle, highlightDigit: i));
+                builder.AppendLine("</div>"); // step
+            }
 
             builder.AppendLine(_htmlEnd);
 
@@ -152,6 +155,11 @@ body {
 
 .cell.changed {
   color: #1b74d3;
+  font-weight: bold;
+}
+
+.highlight {
+  color: red;
   font-weight: bold;
 }
 

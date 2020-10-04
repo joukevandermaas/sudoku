@@ -59,11 +59,11 @@ namespace Sudoku
                     var updatedCells = new List<Cell>();
                     foreach (var option in options)
                     {
-                        var row = puzzle.GetRegion(perpendicularType, option - 1);
+                        var perpendicularRegion = puzzle.GetRegion(perpendicularType, option - 1);
 
-                        foreach (var cell in row)
+                        foreach (var cell in perpendicularRegion)
                         {
-                            if (cell.Column != i && cell.Column != j && cell.HasOptions(value))
+                            if (!region.Contains(cell) && !otherRegion.Contains(cell) && cell.HasOptions(value))
                             {
                                 updatedCells.Add(cell.RemoveOptions(value));
                             }

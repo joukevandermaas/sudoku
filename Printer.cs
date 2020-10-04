@@ -108,7 +108,7 @@ namespace Sudoku
             }
         }
 
-        public static string ForBrowser(Puzzle puzzle, Puzzle previous)
+        public static string ForBrowser(Puzzle puzzle, Puzzle previous, int highlightDigit = 0)
         {
             var builder = new StringBuilder();
             int indentation = 0;
@@ -135,12 +135,27 @@ namespace Sudoku
                     indentation++;
 
                     var options = cell.Value.GetOptions();
-                    var manyOptions = options.Count() > 5;
+                    var hasManyOptions = options.Count() > 5;
 
                     foreach (var opt in options)
                     {
+                        var digit = opt.ToHumanValue();
+
+                        if (highlightDigit != 0 && highlightDigit != digit && !cell.IsResolved)
+                        {
+                            continue;
+                        }
+                        else if (highlightDigit != 0)
+                        {
+                            hasManyOptions = false;
+                        }
+
                         Indent();
-                        builder.AppendFormat("<span class='number{0}'>{1}</span>", manyOptions ? " many" : "", opt.ToHumanValue());
+                        builder.AppendFormat(
+                            "<span class='number {0} {1}'>{2}</span>",
+                            hasManyOptions ? "many" : "",
+                            digit == highlightDigit ? "highlight" : "",
+                            digit);
                         builder.AppendLine();
                     }
 
