@@ -16,6 +16,7 @@ namespace Sudoku
         const string ctc2 = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
         const string ctc3 = "000490000008020004060500070054000600000000000009000580030002090500080300000073000";
         const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
+        const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
 
         private static ISolveStrategy[] _strategies = new ISolveStrategy[]
         {
@@ -23,11 +24,12 @@ namespace Sudoku
             new OneOptionStrategy(),
             new TupleStrategy(),
             new BoxLayoutStrategy(),
+            new XWingStrategy(),
         };
 
         static void Main(string[] args)
         {
-            const string puzzle = xwing;
+            const string puzzle = swordfish;
 
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {

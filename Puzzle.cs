@@ -80,9 +80,11 @@ namespace Sudoku
 
         public IEnumerable<Region> Regions => Rows.Concat(Columns).Concat(Boxes);
 
-        public Region GetRow(int index) => new Region(_cells, RegionType.Row, index);
-        public Region GetColumn(int index) => new Region(_cells, RegionType.Column, index);
-        public Region GetBox(int index) => new Region(_cells, RegionType.Box, index);
+        public Region GetRow(int index) => GetRegion(RegionType.Row, index);
+        public Region GetColumn(int index) => GetRegion(RegionType.Column, index);
+        public Region GetBox(int index) => GetRegion(RegionType.Box, index);
+
+        public Region GetRegion(RegionType type, int index) => new Region(_cells, type, index);
 
         public IEnumerable<Region> Rows
         {
