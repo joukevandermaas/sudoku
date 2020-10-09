@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
-using System.Threading;
 
 namespace Sudoku
 {
@@ -13,6 +10,9 @@ namespace Sudoku
         public const int BoxLength = 3;
 
         private readonly Cell[] _cells;
+        private List<Region>? _rows;
+        private List<Region>? _columns;
+        private List<Region>? _boxes;
 
         public Puzzle(string puzzle)
         {
@@ -23,11 +23,18 @@ namespace Sudoku
                 var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), i);
                 _cells[i] = cell;
             }
+
+            _rows = null;
+            _columns = null;
+            _boxes = null;
         }
 
         public Puzzle(Cell[] cells)
         {
             _cells = cells;
+            _rows = null;
+            _columns = null;
+            _boxes = null;
         }
 
         public bool IsSolved => _cells.All(c => c.IsResolved);
@@ -94,10 +101,18 @@ namespace Sudoku
         {
             get
             {
+                if (_rows != null)
+                {
+                    return _rows;
+                }
+
+                _rows = new List<Region>(LineLength);
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return GetRow(i);
+                    _rows.Add(GetRow(i));
                 }
+
+                return _rows;
             }
         }
 
@@ -105,10 +120,18 @@ namespace Sudoku
         {
             get
             {
+                if (_columns != null)
+                {
+                    return _columns;
+                }
+
+                _columns = new List<Region>(LineLength);
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return GetColumn(i);
+                    _columns.Add(GetColumn(i));
                 }
+
+                return _columns;
             }
         }
 
@@ -116,10 +139,18 @@ namespace Sudoku
         {
             get
             {
+                if (_boxes != null)
+                {
+                    return _boxes;
+                }
+
+                _boxes = new List<Region>(LineLength);
                 for (int i = 0; i < LineLength; i++)
                 {
-                    yield return GetBox(i);
+                    _boxes.Add(GetBox(i));
                 }
+
+                return _boxes;
             }
         }
 

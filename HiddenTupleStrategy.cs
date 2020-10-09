@@ -1,5 +1,7 @@
 ﻿
+using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Sudoku
 {
@@ -7,13 +9,16 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
+            var updatedCells = new List<Cell>();
+            var regions = puzzle.Regions.ToArray();
+
             for (int tupleSize = 2; tupleSize < 5; tupleSize++)
             {
                 var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
 
-                foreach (var region in puzzle.Regions)
+                foreach (var region in regions)
                 {
-                    var (succes, newPuzzle) = FindHiddenTuple(puzzle, region, tupleSize, combinations);
+                    var (succes, newPuzzle) = FindHiddenTuple(updatedCells, puzzle, region, tupleSize, combinations);
 
                     if (succes)
                     {
@@ -25,7 +30,7 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) FindHiddenTuple(Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
+        private (bool, Puzzle) FindHiddenTuple(List<Cell> updatedCells, Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
         {
             for (int i = 0; i < combinations.Length; i++)
             {
@@ -46,19 +51,21 @@ namespace Sudoku
                 }
 
                 // we found a hidden tuple!
-                var updatedCells = new List<Cell>();
-                var options = positions.ToHumanOptions();
+                var options = ArrayPool<int>.Shared.Rent(9);
+                var count = positions.AddIndices(options);
                 var opposite = new SudokuValues(~comb.Values);
 
-                foreach (var opt in options)
+                for (var index = 0; index < count; index++)
                 {
-                    var cell = region[opt - 1];
+                    var cell = region[options[index]];
 
                     if (cell.HasOptions(opposite))
                     {
                         updatedCells.Add(cell.RemoveOptions(opposite));
                     }
                 }
+
+                ArrayPool<int>.Shared.Return(options);
 
                 if (updatedCells.Count > 0)
                 {

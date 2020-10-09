@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 
 namespace Sudoku
 {
@@ -12,6 +10,8 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
+            var updates = new List<Cell>(Puzzle.LineLength);
+
             foreach (var box in puzzle.Boxes)
             {
                 var boxIndex = box[0].Box;
@@ -19,83 +19,76 @@ namespace Sudoku
                 for (int digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
                     var value = SudokuValues.FromHumanValue(digit);
-                    var rowUnique = true;
-                    var colUnique = true;
-                    var row = -1;
-                    var col = -1;
+                    var rows = SudokuValues.None;
+                    var cols = SudokuValues.None;
 
-                    for (var i = 0; i < Puzzle.LineLength;i++)
+                    for (var i = 0; i < Puzzle.LineLength; i++)
                     {
                         var cell = box[i];
-                        
-                        if (!cell.IsResolved && cell.Value.HasAnyOptions(value))
-                        {
-                            if (row == -1 || cell.Row == row)
-                            {
-                                row = cell.Row;
-                            }
-                            else
-                            {
-                                rowUnique = false;
-                            }
 
-                            if (col == -1 || cell.Column == col)
-                            {
-                                col = cell.Column;
-                            }
-                            else
-                            {
-                                colUnique = false;
-                            }
+                        if (cell.HasOptions(value))
+                        {
+                            rows = rows.AddOptions(SudokuValues.FromIndex(cell.Row));
+                            cols = cols.AddOptions(SudokuValues.FromIndex(cell.Column));
                         }
                     }
 
-                    if (rowUnique && row != -1)
+                    if (rows.IsSingle)
                     {
-                        var region = puzzle.GetRow(row);
-                        var otherCells = region.Where(c => c.Box != boxIndex);
-                        var updates = new List<Cell>();
+                        var region = puzzle.GetRow(rows.ToIndex());
+                        var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
 
-                        foreach (var cell in otherCells)
-                        {
-                            if (cell.HasOptions(value))
-                            {
-                                updates.Add(cell.RemoveOptions(value));
-                            }
-                        }
-
-                        if (updates.Any())
+                        if (success)
                         {
                             Program.HighlightDigit = digit;
                             Program.DebugText = $"{digit}s in {box} remove others in {region}.";
-                            return (true, puzzle.UpdateCells(updates));
+
+                            return (true, newPuzzle);
                         }
                     }
-                    if (colUnique && col != -1)
+                    if (cols.IsSingle)
                     {
-                        var region = puzzle.GetColumn(col);
-                        var otherCells = region.Where(c => c.Box != boxIndex);
-                        var updates = new List<Cell>();
+                        var region = puzzle.GetColumn(cols.ToIndex());
+                        var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
 
-                        foreach (var cell in otherCells)
-                        {
-                            if (cell.HasOptions(value))
-                            {
-                                updates.Add(cell.RemoveOptions(value));
-                            }
-                        }
-
-                        if (updates.Any())
+                        if (success)
                         {
                             Program.HighlightDigit = digit;
                             Program.DebugText = $"{digit}s in {box} remove others in {region}.";
-                            return (true, puzzle.UpdateCells(updates));
+
+                            return (true, newPuzzle);
                         }
+
                     }
                 }
             }
 
             return (false, puzzle);
         }
+
+        private (bool, Puzzle) RemoveFromOtherBoxesInRegion(List<Cell> updates, Puzzle puzzle, Region region, SudokuValues value, int boxIndex)
+        {
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                var cell = region[i];
+                if (cell.Box == boxIndex)
+                {
+                    continue;
+                }
+
+                if (cell.HasOptions(value))
+                {
+                    updates.Add(cell.RemoveOptions(value));
+                }
+            }
+
+            if (updates.Count > 0)
+            {
+                return (true, puzzle.UpdateCells(updates));
+            }
+
+            return (false, puzzle);
+        }
+
     }
 }

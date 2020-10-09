@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 
 namespace Sudoku
@@ -7,18 +8,21 @@ namespace Sudoku
     {
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
+            var potentialRegions = new List<(Region region, SudokuValues positions)>();
+            var updatedCells = new List<Cell>();
+
             for (var fishSize = 2; fishSize < 4; fishSize++)
             {
                 for (var digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
-                    var (success, newPuzzle) = FindSwordfish(puzzle, RegionType.Row, digit, fishSize);
+                    var (success, newPuzzle) = FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Row, digit, fishSize);
 
                     if (success)
                     {
                         return (true, newPuzzle);
                     }
 
-                    (success, newPuzzle) = FindSwordfish(puzzle, RegionType.Column, digit, fishSize);
+                    (success, newPuzzle) = FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Column, digit, fishSize);
 
                     if (success)
                     {
@@ -30,12 +34,12 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) FindSwordfish(Puzzle puzzle, RegionType type, int digit, int fishSize)
+        private (bool, Puzzle) FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, Puzzle puzzle, RegionType type, int digit, int fishSize)
         {
+            potentialRegions.Clear();
+
             var perpendicularType = type == RegionType.Row ? RegionType.Column : RegionType.Row;
             var value = SudokuValues.FromHumanValue(digit);
-
-            var potentialRegions = new List<(Region region, SudokuValues positions)>();
 
             foreach (var region in puzzle.GetRegions(type))
             {
@@ -61,17 +65,21 @@ namespace Sudoku
 
             for (int i = 0; i < combinations.Length; i++)
             {
-                var combination = combinations[i].ToIndices();
+                var combination = ArrayPool<int>.Shared.Rent(fishSize);
+
+                combinations[i].AddIndices(combination);
 
                 combinedPositions = SudokuValues.None;
                 regions.Clear();
 
-                foreach (var index in combination)
+                for (var index = 0; index < fishSize; index++)
                 {
                     var regionInfo = potentialRegions[index];
                     combinedPositions = combinedPositions.AddOptions(regionInfo.positions);
                     regions.Add(regionInfo.region);
                 }
+
+                ArrayPool<int>.Shared.Return(combination);
 
                 if (combinedPositions.GetOptionCount() == fishSize)
                 {
@@ -87,12 +95,11 @@ namespace Sudoku
             }
 
             // we found a swordfish!
-            var options = combinedPositions.ToHumanOptions();
+            var options = combinedPositions.ToIndices();
 
-            var updatedCells = new List<Cell>();
             foreach (var option in options)
             {
-                var perpendicularRegion = puzzle.GetRegion(perpendicularType, option - 1);
+                var perpendicularRegion = puzzle.GetRegion(perpendicularType, option);
 
                 for (int i = 0; i < Puzzle.LineLength; i++)
                 {

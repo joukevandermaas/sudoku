@@ -38,8 +38,6 @@ namespace Sudoku
 
         static void Main(string[] args)
         {
-            var combinations = Helpers.GetCombinationIndices(5, 2);
-
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
                 const string puzzle = ctc2;
@@ -55,16 +53,12 @@ namespace Sudoku
 
                 foreach (var puzzle in puzzles)
                 {
-                    // if (puzzle != slow) continue;
-
                     totalCount += 1;
                     var (time, success, solvedPuzzle) = SolveFast(puzzle);
                     totalTime += time;
                     times.Add((time, puzzle));
 
                     successCount += success ? 1 : 0;
-
-                    // break;
                 }
 
                 Console.WriteLine("Solved {0}/{1} in {2}", successCount, totalCount, totalTime);

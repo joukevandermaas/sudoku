@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace Sudoku
@@ -40,8 +42,52 @@ namespace Sudoku
         public int ToHumanValue() => ((int)Math.Log2(Values)) + 1;
         public int ToIndex() => ((int)Math.Log2(Values));
 
-        public IEnumerable<int> ToHumanOptions() => GetOptions().Select(o => o.ToHumanValue());
-        public IEnumerable<int> ToIndices() => GetOptions().Select(o => o.ToIndex());
+        public IEnumerable<int> ToHumanOptions()
+        {
+            for (int i = 1; i <= Puzzle.LineLength; i++)
+            {
+                var option = SudokuValues.FromHumanValue(i);
+                if (HasAnyOptions(option))
+                {
+                    yield return i;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Can be used in hot paths to copy the options into a reusable array to prevent allocations.
+        /// Returns the number of options found.
+        /// </summary>
+        public int AddIndices(int[] array)
+        {
+            int index = 0;
+            int count = 0;
+
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                var option = SudokuValues.FromIndex(i);
+                if (HasAnyOptions(option))
+                {
+                    array[index] = i;
+                    index += 1;
+                    count += 1;
+                }
+            }
+
+            return count;
+        }
+
+        public IEnumerable<int> ToIndices()
+        {
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                var option = SudokuValues.FromIndex(i);
+                if (HasAnyOptions(option))
+                {
+                    yield return i;
+                }
+            }
+        }
 
         public IEnumerable<SudokuValues> GetOptions()
         {

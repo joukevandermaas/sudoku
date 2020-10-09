@@ -30,7 +30,7 @@ namespace Sudoku
                 var cell = region[i];
                 if (cell.HasOptions(digits))
                 {
-                    positions = positions.AddOptions(SudokuValues.FromHumanValue(i + 1));
+                    positions = positions.AddOptions(SudokuValues.FromIndex(i));
                 }
             }
 
