@@ -12,6 +12,7 @@ namespace Sudoku
         public static SudokuValues None { get; } = new SudokuValues(0);
 
         public static SudokuValues FromHumanValue(int value) => new SudokuValues(1 << (value - 1));
+        public static SudokuValues FromIndex(int value) => new SudokuValues(1 << value);
         public static SudokuValues FromCharacter(char value)
         {
             var digit = (int)(value - 48); // 48 is 0 in ascii
@@ -36,12 +37,11 @@ namespace Sudoku
         public SudokuValues AddOptions(SudokuValues options) => new SudokuValues(Values | options.Values);
         public bool HasAnyOptions(SudokuValues options) => (Values & options.Values) != 0;
 
-        public int ToHumanValue()
-        {
-            return ((int)Math.Log2(Values)) + 1;
-        }
+        public int ToHumanValue() => ((int)Math.Log2(Values)) + 1;
+        public int ToIndex() => ((int)Math.Log2(Values));
 
         public IEnumerable<int> ToHumanOptions() => GetOptions().Select(o => o.ToHumanValue());
+        public IEnumerable<int> ToIndices() => GetOptions().Select(o => o.ToIndex());
 
         public IEnumerable<SudokuValues> GetOptions()
         {

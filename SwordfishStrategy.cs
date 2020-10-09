@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -55,27 +54,34 @@ namespace Sudoku
                 return (false, puzzle);
             }
 
-            var combinations = Helpers.GetCombinationIndices(potentialRegions.Count, fishSize).ToArray();
+            var combinations = Helpers.GetCombinationIndices(potentialRegions.Count, fishSize);
             var combinedPositions = SudokuValues.None;
-            List<Region>? regions = null;
+            var regions = new List<Region>();
+            var foundFish = false;
 
             for (int i = 0; i < combinations.Length; i++)
             {
-                var comb = combinations[i];
+                var combination = combinations[i].ToIndices();
 
-                combinedPositions = comb
-                    .Select(i => potentialRegions[i].positions)
-                    .Aggregate(SudokuValues.None, (allPositions, positions) => allPositions.AddOptions(positions));
+                combinedPositions = SudokuValues.None;
+                regions.Clear();
+
+                foreach (var index in combination)
+                {
+                    var regionInfo = potentialRegions[index];
+                    combinedPositions = combinedPositions.AddOptions(regionInfo.positions);
+                    regions.Add(regionInfo.region);
+                }
 
                 if (combinedPositions.GetOptionCount() == fishSize)
                 {
-                    regions = comb.Select(i => potentialRegions[i].region).ToList();
+                    foundFish = true;
                     break;
                 }
             }
 
             // no 3 rows/columns had options in exactly 3 spots
-            if (regions == null)
+            if (!foundFish)
             {
                 return (false, puzzle);
             }
@@ -92,14 +98,31 @@ namespace Sudoku
                 {
                     var cell = perpendicularRegion[i];
 
-                    if (!regions.Any(r => r.Contains(cell)) && cell.HasOptions(value))
+                    if (!cell.HasOptions(value))
                     {
-                        updatedCells.Add(cell.RemoveOptions(value));
+                        continue;
                     }
+
+                    var originalRegionsContains = false;
+                    foreach (var region in regions)
+                    {
+                        if (region.Contains(cell))
+                        {
+                            originalRegionsContains = true;
+                            break;
+                        }
+                    }
+
+                    if (originalRegionsContains)
+                    {
+                        continue;
+                    }
+
+                    updatedCells.Add(cell.RemoveOptions(value));
                 }
             }
 
-            if (updatedCells.Any())
+            if (updatedCells.Count > 0)
             {
                 Program.HighlightDigit = digit;
                 Program.DebugText = $"Fish of size {fishSize} in {string.Join(", ", regions)}.";

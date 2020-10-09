@@ -1,6 +1,5 @@
 ﻿
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -10,9 +9,7 @@ namespace Sudoku
         {
             for (int tupleSize = 2; tupleSize < 5; tupleSize++)
             {
-                var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize)
-                    .Select(c => c.Aggregate(SudokuValues.None, (digits, i) => digits.AddOptions(SudokuValues.FromHumanValue(i + 1))))
-                    .ToArray();
+                var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
 
                 foreach (var region in puzzle.Regions)
                 {
@@ -63,7 +60,7 @@ namespace Sudoku
                     }
                 }
 
-                if (updatedCells.Any())
+                if (updatedCells.Count > 0)
                 {
                     Program.DebugText = $"Hidden {comb} tuple in {region}";
 

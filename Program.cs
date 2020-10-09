@@ -38,9 +38,11 @@ namespace Sudoku
 
         static void Main(string[] args)
         {
+            var combinations = Helpers.GetCombinationIndices(5, 2);
+
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
-                const string puzzle = nyt;
+                const string puzzle = ctc2;
                 SolveDebug(puzzle);
             }
             else

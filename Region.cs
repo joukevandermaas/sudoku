@@ -61,6 +61,19 @@ namespace Sudoku
             }
         }
 
+        public bool Contains(Cell cell)
+        {
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                if (this[i] == cell)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private IEnumerable<Cell> GetCells()
         {
             for (var i = 0; i < Puzzle.LineLength; i++)

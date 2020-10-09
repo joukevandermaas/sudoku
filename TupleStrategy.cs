@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 
 namespace Sudoku
 {
@@ -14,9 +12,11 @@ namespace Sudoku
         {
             for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
             {
+                var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+
                 foreach (var region in puzzle.Regions)
                 {
-                    var (success, newPuzzle) = ScanRegion(puzzle, region, tupleSize);
+                    var (success, newPuzzle) = ScanRegion(puzzle, region, tupleSize, combinations);
 
                     if (success)
                     {
@@ -28,25 +28,24 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) ScanRegion(Puzzle puzzle, Region region, int tupleSize)
+        private (bool, Puzzle) ScanRegion(Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
         {
-            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
-
-            foreach (var combination in combinations)
+            for (int j = 0; j < combinations.Length; j++)
             {
-                if (combination.Select(i => region[i]).Any(c => c.IsResolved))
-                { 
-                    // skip any combinations of cells that are already resolved
+                var comb = combinations[j];
+                var indices = comb.ToIndices();
+
+                if (region.AnyDigitPlaced(comb))
+                {
+                    // skip any tuples that include placed digits
                     continue;
                 }
 
                 var possibleValues = SudokuValues.None;
 
-                for (var i = 0; i < tupleSize; i++)
+                foreach (var index in indices)
                 {
-                    var index = combination[i];
                     var cell = region[index];
-
                     possibleValues = possibleValues.AddOptions(cell.Value);
                 }
 
@@ -62,7 +61,7 @@ namespace Sudoku
                     {
                         var otherCell = region[i];
 
-                        if (otherCell.IsResolved || combination.Contains(i))
+                        if (otherCell.IsResolved)
                         {
                             continue;
                         }
@@ -71,11 +70,16 @@ namespace Sudoku
                         {
                             continue;
                         }
+                        
+                        if (comb.HasAnyOptions(SudokuValues.FromIndex(i)))
+                        {
+                            continue;
+                        }
 
                         updatedCells.Add(otherCell.RemoveOptions(possibleValues));
                     }
 
-                    if (updatedCells.Any())
+                    if (updatedCells.Count > 0)
                     {
                         Program.DebugText = $"{possibleValues} tuple in {region}.";
                         return (true, puzzle.UpdateCells(updatedCells));
