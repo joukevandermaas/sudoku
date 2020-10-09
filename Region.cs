@@ -75,8 +75,10 @@ namespace Sudoku
             {
                 var values = SudokuValues.None;
 
-                foreach (var cell in GetCells())
+                for (int i = 0; i < Puzzle.LineLength; i++)
                 {
+                    var cell = this[i];
+
                     if (cell.IsResolved)
                     {
                         if (values.HasAnyOptions(cell.Value))

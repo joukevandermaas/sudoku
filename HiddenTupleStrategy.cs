@@ -30,8 +30,10 @@ namespace Sudoku
 
         private (bool, Puzzle) FindHiddenTuple(Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
         {
-            foreach (var comb in combinations)
+            for (int i = 0; i < combinations.Length; i++)
             {
+                var comb = combinations[i];
+
                 if (region.AnyDigitPlaced(comb))
                 {
                     // skip any tuples that include placed digits

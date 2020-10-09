@@ -34,16 +34,20 @@ namespace Sudoku
             var placedDigits = SudokuValues.None;
             var removedOptions = false;
 
-            foreach (var cell in region)
+            for (int i = 0; i < Puzzle.LineLength; i++)
             {
+                var cell = region[i];
+
                 if (cell.IsResolved)
                 {
                     placedDigits = placedDigits.AddOptions(cell.Value);
                 }
             }
 
-            foreach (var cell in region)
+            for (int i = 0; i < Puzzle.LineLength; i++)
             {
+                var cell = region[i];
+
                 if (cell.HasOptions(placedDigits))
                 {
                     cells[cell.Index] = cell.RemoveOptions(placedDigits);

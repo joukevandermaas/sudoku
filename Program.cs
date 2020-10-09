@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -15,9 +16,12 @@ namespace Sudoku
         const string ctc1 = "000000012000000345000003670000081500000754000004230000067900000312000000850000000";
         const string ctc2 = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
         const string ctc3 = "000490000008020004060500070054000600000000000009000580030002090500080300000073000";
+        const string ctc4 = "000000000100002300040050060060070010200003800000000007009500000050060070300008200";
         const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
         const string hard = "020500700600090000000000100010400002000083000070000000309000080000100000800000000";
+        const string nyt = "000000000000001269200050001000086900050049000000000070038070600005000097090005004";
         const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
+        const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
 
         public static int HighlightDigit = 0;
         public static string DebugText = string.Empty;
@@ -26,27 +30,49 @@ namespace Sudoku
         {
             new SingleStrategy(),
             new OneOptionStrategy(),
-            new TupleStrategy(),
-            new HiddenTupleStrategy(),
             new BoxLayoutStrategy(),
+            new HiddenTupleStrategy(),
+            new TupleStrategy(),
             new SwordfishStrategy(),
         };
 
         static void Main(string[] args)
         {
-            const string puzzle = easy2;
-
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
+                const string puzzle = nyt;
                 SolveDebug(puzzle);
             }
             else
             {
-                SolveFast(puzzle);
+                var puzzles = File.ReadAllLines("top100.txt");
+                var totalTime = TimeSpan.Zero;
+                var times = new List<(TimeSpan time, string puzzle)>();
+                var successCount = 0;
+                var totalCount = 0;
+
+                foreach (var puzzle in puzzles)
+                {
+                    // if (puzzle != slow) continue;
+
+                    totalCount += 1;
+                    var (time, success, solvedPuzzle) = SolveFast(puzzle);
+                    totalTime += time;
+                    times.Add((time, puzzle));
+
+                    successCount += success ? 1 : 0;
+
+                    // break;
+                }
+
+                Console.WriteLine("Solved {0}/{1} in {2}", successCount, totalCount, totalTime);
+                var slowest = times.OrderByDescending(t => t.time).First();
+
+                Console.WriteLine("Slowest ({0}): \"{1}\"", slowest.time, slowest.puzzle);
             }
         }
 
-        static void SolveFast(string sudoku)
+        static (TimeSpan, bool, Puzzle) SolveFast(string sudoku)
         {
             var puzzle = new Puzzle(sudoku);
             var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 3, _strategies);
@@ -55,8 +81,7 @@ namespace Sudoku
             var (result, solvedPuzzle) = solver.Solve(puzzle);
             time.Stop();
 
-            Console.WriteLine(Printer.ForConsole(solvedPuzzle));
-            Console.WriteLine("{0} in {1}", result, time.Elapsed);
+            return (time.Elapsed, result == SolveResult.Success, solvedPuzzle);
         }
 
         static void SolveDebug(string sudoku)

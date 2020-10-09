@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "sudoku": {
+      "commandName": "Project",
+      "workingDirectory": "$(solutionDir)"
+    }
+  }
+}

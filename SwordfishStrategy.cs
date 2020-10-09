@@ -88,8 +88,10 @@ namespace Sudoku
             {
                 var perpendicularRegion = puzzle.GetRegion(perpendicularType, option - 1);
 
-                foreach (var cell in perpendicularRegion)
+                for (int i = 0; i < Puzzle.LineLength; i++)
                 {
+                    var cell = perpendicularRegion[i];
+
                     if (!regions.Any(r => r.Contains(cell)) && cell.HasOptions(value))
                     {
                         updatedCells.Add(cell.RemoveOptions(value));

@@ -42,8 +42,9 @@ namespace Sudoku
 
                 var possibleValues = SudokuValues.None;
 
-                foreach (var index in combination)
+                for (var i = 0; i < tupleSize; i++)
                 {
+                    var index = combination[i];
                     var cell = region[index];
 
                     possibleValues = possibleValues.AddOptions(cell.Value);

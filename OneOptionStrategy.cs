@@ -29,8 +29,10 @@ namespace Sudoku
                 var count = 0;
                 Cell foundCell = default;
 
-                foreach (var cell in region)
+                for (int j = 0; j < Puzzle.LineLength; j++)
                 {
+                    var cell = region[j];
+
                     if (cell.HasOptions(digit))
                     {
                         count += 1;

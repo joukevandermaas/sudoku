@@ -24,8 +24,10 @@ namespace Sudoku
                     var row = -1;
                     var col = -1;
 
-                    foreach (var cell in box)
+                    for (var i = 0; i < Puzzle.LineLength;i++)
                     {
+                        var cell = box[i];
+                        
                         if (!cell.IsResolved && cell.Value.HasAnyOptions(value))
                         {
                             if (row == -1 || cell.Row == row)
@@ -50,7 +52,8 @@ namespace Sudoku
 
                     if (rowUnique && row != -1)
                     {
-                        var otherCells = puzzle.GetRow(row).Where(c => c.Box != boxIndex);
+                        var region = puzzle.GetRow(row);
+                        var otherCells = region.Where(c => c.Box != boxIndex);
                         var updates = new List<Cell>();
 
                         foreach (var cell in otherCells)
@@ -64,12 +67,14 @@ namespace Sudoku
                         if (updates.Any())
                         {
                             Program.HighlightDigit = digit;
+                            Program.DebugText = $"{digit}s in {box} remove others in {region}.";
                             return (true, puzzle.UpdateCells(updates));
                         }
                     }
                     if (colUnique && col != -1)
                     {
-                        var otherCells = puzzle.GetColumn(col).Where(c => c.Box != boxIndex);
+                        var region = puzzle.GetColumn(col);
+                        var otherCells = region.Where(c => c.Box != boxIndex);
                         var updates = new List<Cell>();
 
                         foreach (var cell in otherCells)
@@ -83,6 +88,7 @@ namespace Sudoku
                         if (updates.Any())
                         {
                             Program.HighlightDigit = digit;
+                            Program.DebugText = $"{digit}s in {box} remove others in {region}.";
                             return (true, puzzle.UpdateCells(updates));
                         }
                     }

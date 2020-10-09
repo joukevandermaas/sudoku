@@ -1,14 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 
 namespace Sudoku
 {
     static class Helpers
     {
+        private static Dictionary<(int, int), int[][]> _combinationCache = new Dictionary<(int, int), int[][]>();
+
         public static bool AnyDigitPlaced(this Region region, SudokuValues digits)
         {
-            foreach (var cell in region)
+            for (int i = 0; i < Puzzle.LineLength; i++)
             {
+                var cell = region[i];
                 if (cell.IsResolved && cell.Value.HasAnyOptions(digits))
                 {
                     return true;
@@ -34,9 +39,18 @@ namespace Sudoku
             return positions;
         }
 
-        public static IEnumerable<int[]> GetCombinationIndices(int count, int tupleSize)
+        public static int[][] GetCombinationIndices(int count, int tupleSize)
         {
-            return GetCombinationsHelper(count, 0, new int[0], tupleSize);
+            if (_combinationCache.ContainsKey((count, tupleSize)))
+            {
+                return _combinationCache[(count, tupleSize)];
+            }
+
+            var combinations = GetCombinationsHelper(count, 0, new int[0], tupleSize).ToArray();
+
+            _combinationCache.Add((count, tupleSize), combinations);
+
+            return combinations;
         }
 
         private static IEnumerable<int[]> GetCombinationsHelper(int count, int startDigit, int[] previousDigits, int tupleSize)
