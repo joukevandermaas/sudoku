@@ -34,7 +34,6 @@ namespace Sudoku
         private static ISolveStrategy[] _strategies = new ISolveStrategy[]
         {
             new SingleStrategy(),
-            new OneOptionStrategy(),
             new BoxLayoutStrategy(),
             new HiddenTupleStrategy(),
             new TupleStrategy(),

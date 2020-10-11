@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Sudoku
 {
@@ -58,6 +59,31 @@ namespace Sudoku
                         regions.Enqueue(new Region(cells, RegionType.Column, newCell.Column));
                         regions.Enqueue(new Region(cells, RegionType.Box, newCell.Box));
                     }
+
+                    removedOptions = true;
+                }
+
+                // we now interpret i as a digit instead and check if it only
+                // has one position in the region (then we can place it)
+                var digit = SudokuValues.FromIndex(i);
+
+                if (placedDigits.HasAnyOptions(digit) || removedOptions)
+                {
+                    continue;
+                }
+
+                var positions = region.GetPositions(digit);
+
+                if (positions.IsSingle)
+                {
+                    var index = positions.ToIndex();
+                    var currentCell = region[index];
+
+                    cells[currentCell.Index] = currentCell.SetValue(digit);
+
+                    regions.Enqueue(new Region(cells, RegionType.Row, currentCell.Row));
+                    regions.Enqueue(new Region(cells, RegionType.Column, currentCell.Column));
+                    regions.Enqueue(new Region(cells, RegionType.Box, currentCell.Box));
 
                     removedOptions = true;
                 }
