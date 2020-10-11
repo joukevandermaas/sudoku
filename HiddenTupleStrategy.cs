@@ -1,7 +1,6 @@
 ﻿
 using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -10,7 +9,7 @@ namespace Sudoku
         public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var updatedCells = new List<Cell>();
-            var regions = puzzle.Regions.ToArray();
+            var regions = puzzle.Regions;
 
             foreach (var region in regions)
             {
@@ -55,7 +54,7 @@ namespace Sudoku
                 // we found a hidden tuple!
                 var options = ArrayPool<int>.Shared.Rent(9);
                 var count = positions.AddIndices(options);
-                var opposite = new SudokuValues(~comb.Values);
+                var opposite = SudokuValues.Invert(comb);
 
                 for (var index = 0; index < count; index++)
                 {

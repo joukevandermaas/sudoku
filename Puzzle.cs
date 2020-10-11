@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -11,13 +10,10 @@ namespace Sudoku
         public const int BoxLength = 3;
 
         private readonly Cell[] _cells;
-        private readonly Region[] _rows;
-        private readonly Region[] _columns;
-        private readonly Region[] _boxes;
 
-        public ReadOnlyCollection<Region> Rows => Array.AsReadOnly(_rows);
-        public ReadOnlyCollection<Region> Columns => Array.AsReadOnly(_columns);
-        public ReadOnlyCollection<Region> Boxes => Array.AsReadOnly(_boxes);
+        public ReadOnlyCollection<Region> Rows { get; }
+        public ReadOnlyCollection<Region> Columns { get; }
+        public ReadOnlyCollection<Region> Boxes { get; }
 
         public static Puzzle FromString(string puzzle)
         {
@@ -36,19 +32,39 @@ namespace Sudoku
         {
             _cells = cells;
 
-            _rows = new Region[LineLength];
-            _columns = new Region[LineLength];
-            _boxes = new Region[LineLength];
+            var rows = new Region[LineLength];
+            var columns = new Region[LineLength];
+            var boxes = new Region[LineLength];
 
             for (int i = 0; i < LineLength; i++)
             {
-                _rows[i] = new Region(_cells, RegionType.Row, i);
-                _columns[i] = new Region(_cells, RegionType.Column, i);
-                _boxes[i] = new Region(_cells, RegionType.Box, i);
+                rows[i] = new Region(_cells, RegionType.Row, i);
+                columns[i] = new Region(_cells, RegionType.Column, i);
+                boxes[i] = new Region(_cells, RegionType.Box, i);
             }
+
+            Rows = Array.AsReadOnly(rows);
+            Columns = Array.AsReadOnly(columns);
+            Boxes = Array.AsReadOnly(boxes);
         }
 
-        public bool IsSolved => _cells.All(c => c.IsResolved);
+        public bool IsSolved
+        {
+            get
+            {
+                for (int i = 0; i < _cells.Length; i++)
+                {
+                    var cell = _cells[i];
+
+                    if (!cell.IsResolved)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
 
         public Cell this[int i] => _cells[i];
         public Cell this[int row, int col] => _cells[row * LineLength + col];
@@ -57,14 +73,44 @@ namespace Sudoku
         {
             get
             {
-                var allCellsValid = _cells.All(c => c.IsValid);
-
-                if (!allCellsValid)
+                for (int i = 0; i < _cells.Length; i++)
                 {
-                    return false;
+                    var cell = _cells[i];
+
+                    if (!cell.IsValid)
+                    {
+                        return false;
+                    }
                 }
 
-                return Rows.Concat(Columns).Concat(Boxes).All(c => c.IsValid);
+                for (int i = 0; i < Rows.Count; i++)
+                {
+                    var row = Rows[i];
+                    if (!row.IsValid)
+                    {
+                        return false;
+                    }
+                }
+
+                for (int i = 0; i < Columns.Count; i++)
+                {
+                    var col = Columns[i];
+                    if (!col.IsValid)
+                    {
+                        return false;
+                    }
+                }
+                
+                for (int i = 0; i < Boxes.Count; i++)
+                {
+                    var box = Boxes[i];
+                    if (!box.IsValid)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
             }
         }
 

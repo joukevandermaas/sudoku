@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -13,7 +12,7 @@ namespace Sudoku
         public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var updatedCells = new List<Cell>();
-            var regions = puzzle.Regions.ToArray();
+            var regions = puzzle.Regions;
 
             foreach (var region in regions)
             {

@@ -10,6 +10,8 @@ namespace Sudoku
         public static SudokuValues All { get; } = new SudokuValues(~0);
         public static SudokuValues None { get; } = new SudokuValues(0);
 
+        public static SudokuValues Invert(SudokuValues values) => new SudokuValues(~values.Values);
+
         public static SudokuValues FromHumanValue(int value) => new SudokuValues(1 << (value - 1));
         public static SudokuValues FromIndex(int value) => new SudokuValues(1 << value);
         public static SudokuValues FromCharacter(char value)
