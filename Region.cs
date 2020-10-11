@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -13,7 +12,7 @@ namespace Sudoku
         Box
     }
 
-    struct Region : IEnumerable<Cell>
+    struct Region : IEnumerable<Cell>, IEquatable<Region>
     {
         private readonly Cell[] _allCells;
 
@@ -32,17 +31,20 @@ namespace Sudoku
         {
             get
             {
+                int offset;
+
                 switch (Type)
                 {
                     case RegionType.Row:
-                        var rowIndex = (Index * Puzzle.LineLength) + i;
-                        return _allCells[rowIndex];
+                        offset = (Index * Puzzle.LineLength) + i;
+                        break;
 
                     case RegionType.Column:
-                        var colIndex = Index + (i * Puzzle.LineLength);
-                        return _allCells[colIndex];
+                        offset = Index + (i * Puzzle.LineLength);
+                        break;
 
                     case RegionType.Box:
+                        // note: integer division!
                         var insideBoxRow = i / Puzzle.BoxLength;
                         var insideBoxCol = i % Puzzle.BoxLength;
 
@@ -52,12 +54,14 @@ namespace Sudoku
                         var row = outsideBoxRow * Puzzle.BoxLength + insideBoxRow;
                         var col = outsideBoxCol * Puzzle.BoxLength + insideBoxCol;
 
-                        var boxIndex = (row * Puzzle.LineLength) + col;
-                        return _allCells[boxIndex];
+                        offset = (row * Puzzle.LineLength) + col;
+                        break;
 
                     default:
                         throw new NotImplementedException();
                 }
+
+                return _allCells[offset];
             }
         }
 
@@ -116,5 +120,20 @@ namespace Sudoku
         public IEnumerator<Cell> GetEnumerator() => GetCells().GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetCells().GetEnumerator();
+
+        public bool Equals(Region other)
+        {
+            return other.Index == Index && other.Type == Type && other._allCells == _allCells;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Region other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Index, Type, _allCells);
+        }
     }
 }

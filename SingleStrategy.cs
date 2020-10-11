@@ -7,21 +7,24 @@ namespace Sudoku
         public (bool, Puzzle) Apply(Puzzle puzzle)
         {
             var cells = puzzle.Cells.ToArray();
+            var regions = new UniqueQueue<Region>(Puzzle.LineLength);
+
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                regions.Enqueue(new Region(cells, RegionType.Row, i));
+                regions.Enqueue(new Region(cells, RegionType.Column, i));
+                regions.Enqueue(new Region(cells, RegionType.Box, i));
+            }
 
             var anySuccess = false;
-            for (int tupleSize = 1; tupleSize <= 4; tupleSize++)
+
+            // keep scanning regions for naked singles, removing
+            // options when digits are placed. when a digit is placed,
+            // its box, row and column are added back to 'regions' so
+            // they can be scanned again.
+            while (regions.TryDequeue(out var region))
             {
-                for (int i = 0; i < Puzzle.LineLength; i++)
-                {
-                    var row = new Region(cells, RegionType.Row, i);
-                    anySuccess = ScanRegion(cells, row) || anySuccess;
-
-                    var col = new Region(cells, RegionType.Column, i);
-                    anySuccess = ScanRegion(cells, col) || anySuccess;
-
-                    var box = new Region(cells, RegionType.Box, i);
-                    anySuccess = ScanRegion(cells, box) || anySuccess;
-                }
+                anySuccess = ScanRegion(regions, cells, region) || anySuccess;
             }
 
             puzzle = new Puzzle(cells);
@@ -29,7 +32,7 @@ namespace Sudoku
             return (anySuccess, puzzle);
         }
 
-        private bool ScanRegion(Cell[] cells, Region region)
+        private bool ScanRegion(UniqueQueue<Region> regions, Cell[] cells, Region region)
         {
             var placedDigits = SudokuValues.None;
             var removedOptions = false;
@@ -50,7 +53,18 @@ namespace Sudoku
 
                 if (cell.HasOptions(placedDigits))
                 {
-                    cells[cell.Index] = cell.RemoveOptions(placedDigits);
+                    var newCell = cell.RemoveOptions(placedDigits);
+                    cells[cell.Index] = newCell;
+
+                    if (newCell.IsResolved)
+                    {
+                        // since we have placed a digit we must
+                        // scan these regions again
+                        regions.Enqueue(new Region(cells, RegionType.Row, newCell.Row));
+                        regions.Enqueue(new Region(cells, RegionType.Column, newCell.Column));
+                        regions.Enqueue(new Region(cells, RegionType.Box, newCell.Box));
+                    }
+
                     removedOptions = true;
                 }
             }

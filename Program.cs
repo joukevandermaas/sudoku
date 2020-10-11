@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Sudoku
 {
@@ -45,32 +46,56 @@ namespace Sudoku
             }
             else
             {
-                var puzzles = File.ReadAllLines("top100.txt");
-                var totalTime = TimeSpan.Zero;
-                var times = new List<(TimeSpan time, string puzzle)>();
-                var successCount = 0;
-                var totalCount = 0;
+                var fileName = "top100.txt";
 
-                foreach (var puzzle in puzzles)
+                if (args.Length > 0)
                 {
-                    totalCount += 1;
-                    var (time, success, solvedPuzzle) = SolveFast(puzzle);
-                    totalTime += time;
-                    times.Add((time, puzzle));
-
-                    successCount += success ? 1 : 0;
+                    fileName = args[0];
                 }
 
-                Console.WriteLine("Solved {0}/{1} in {2}", successCount, totalCount, totalTime);
-                var slowest = times.OrderByDescending(t => t.time).First();
+                var puzzles = File.ReadAllLines(fileName).Select(p => new Puzzle(p)).ToList();
 
-                Console.WriteLine("Slowest ({0}): \"{1}\"", slowest.time, slowest.puzzle);
+                SolveMany(puzzles, false);
             }
         }
 
-        static (TimeSpan, bool, Puzzle) SolveFast(string sudoku)
+        private static void SolveMany(List<Puzzle> puzzles, bool parallel)
         {
-            var puzzle = new Puzzle(sudoku);
+            var results = new (TimeSpan time, bool success)[puzzles.Count];
+
+            var watch = Stopwatch.StartNew();
+            if (parallel)
+            {
+                Parallel.For(0, puzzles.Count, (i) =>
+                {
+                    var puzzle = puzzles[i];
+                    var (time, success, solvedPuzzle) = SolveFast(puzzle);
+                    results[i] = (time, success);
+                });
+            }
+            else
+            {
+                for (var i = 0; i < puzzles.Count; i++)
+                {
+                    var puzzle = puzzles[i];
+                    var (time, success, solvedPuzzle) = SolveFast(puzzle);
+                    results[i] = (time, success);
+                }
+            }
+            watch.Stop();
+
+            var totalTime = results.Aggregate(TimeSpan.Zero, (total, current) => total + current.time);
+            var successCount = results.Aggregate(0, (total, current) => total += (current.success ? 1 : 0));
+
+            Console.WriteLine("Solved {0}/{1} in {2}ms (wall time {3}ms)",
+                successCount,
+                puzzles.Count,
+                totalTime.TotalMilliseconds,
+                watch.ElapsedMilliseconds);
+        }
+
+        static (TimeSpan, bool, Puzzle) SolveFast(Puzzle puzzle)
+        {
             var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 3, _strategies);
 
             var time = Stopwatch.StartNew();

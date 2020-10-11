@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 
 namespace Sudoku
 {
     static class Helpers
     {
-        private static Dictionary<(int, int), SudokuValues[]> _combinationCache = new Dictionary<(int, int), SudokuValues[]>();
+        private static ConcurrentDictionary<(int, int), SudokuValues[]> _combinationCache = new ConcurrentDictionary<(int, int), SudokuValues[]>();
 
         public static bool AnyDigitPlaced(this Region region, SudokuValues digits)
         {
@@ -59,7 +58,7 @@ namespace Sudoku
                 tupleSize: tupleSize,
                 currentSize: 0);
 
-            _combinationCache.Add((count, tupleSize), results);
+            _combinationCache.TryAdd((count, tupleSize), results);
 
             return results;
         }
