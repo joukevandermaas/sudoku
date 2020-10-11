@@ -66,7 +66,7 @@ namespace Sudoku
             {
                 var combination = ArrayPool<int>.Shared.Rent(fishSize);
 
-                combinations[i].AddIndices(combination);
+                combinations[i].CopyIndices(combination);
 
                 combinedPositions = SudokuValues.None;
                 regions.Clear();

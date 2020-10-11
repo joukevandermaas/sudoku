@@ -23,6 +23,7 @@ namespace Sudoku
         const string nyt = "000000000000001269200050001000086900050049000000000070038070600005000097090005004";
         const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
         const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
+        const string bruteforce = "300060005020000040007000200000607000900080006000901000002000700040000010600050009";
 
 #if DEBUG
         public static int HighlightDigit = 0;
@@ -44,7 +45,7 @@ namespace Sudoku
         {
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
-                const string puzzle = ctc2;
+                const string puzzle = bruteforce;
                 SolveDebug(puzzle);
             }
             else

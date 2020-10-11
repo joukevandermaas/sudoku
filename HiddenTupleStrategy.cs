@@ -52,8 +52,8 @@ namespace Sudoku
                 }
 
                 // we found a hidden tuple!
-                var options = ArrayPool<int>.Shared.Rent(9);
-                var count = positions.AddIndices(options);
+                var options = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
+                var count = positions.CopyIndices(options);
                 var opposite = SudokuValues.Invert(comb);
 
                 for (var index = 0; index < count; index++)

@@ -47,7 +47,7 @@ namespace Sudoku
                 }
 
                 var indices = ArrayPool<int>.Shared.Rent(tupleSize);
-                var count = comb.AddIndices(indices);
+                var count = comb.CopyIndices(indices);
                 var possibleValues = SudokuValues.None;
 
                 for (int i = 0; i < count; i++)

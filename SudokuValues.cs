@@ -57,10 +57,9 @@ namespace Sudoku
         /// Can be used in hot paths to copy the options into a reusable array to prevent allocations.
         /// Returns the number of options found.
         /// </summary>
-        public int AddIndices(int[] array)
+        public int CopyIndices(int[] array)
         {
             int index = 0;
-            int count = 0;
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
@@ -69,11 +68,31 @@ namespace Sudoku
                 {
                     array[index] = i;
                     index += 1;
-                    count += 1;
                 }
             }
 
-            return count;
+            return index;
+        }
+
+        /// <summary>
+        /// Can be used in hot paths to copy the options into a reusable array to prevent allocations.
+        /// Returns the number of options found.
+        /// </summary>
+        public int CopyValues(SudokuValues[] array)
+        {
+            int index = 0;
+
+            for (int i = 0; i < Puzzle.LineLength; i++)
+            {
+                var option = SudokuValues.FromIndex(i);
+                if (HasAnyOptions(option))
+                {
+                    array[index] = option;
+                    index += 1;
+                }
+            }
+
+            return index;
         }
 
         public IEnumerable<int> ToIndices()

@@ -5,13 +5,12 @@ namespace Sudoku
 {
     static class Printer
     {
-        public static string ForConsole(Puzzle puzzle, bool printIndices = false, bool printPossibilities = false)
+        public static string ForConsole(Puzzle puzzle, bool printIndices = false)
         {
             // only works for sudokus where the size is a cube
             // │ ┤ ╡ ╢ ╖ ╕ ╣ ║ ╗ ╝ ╜ ╛ ┐ └ ┴ ┬ ├ ─ ┼ ╞ ╟ ╚ ╔ ╩ ╦ ╠ ═ ╬ ╧ ╨ ╤ ╥ ╙ ╘ ╒ ╓ ╫ ╪ ┘ ┌
 
             var builder = new StringBuilder();
-            var cells = puzzle.Cells.ToArray();
 
             if (printIndices)
             {
@@ -32,7 +31,7 @@ namespace Sudoku
 
             var rowNr = 0;
 
-            for (var i = 0; i < cells.Length; i++)
+            for (var i = 0; i < Puzzle.LineLength * Puzzle.LineLength; i++)
             {
                 if (i != 0)
                 {
@@ -65,9 +64,9 @@ namespace Sudoku
                     }
                 }
 
-                if (cells[i].IsResolved)
+                if (puzzle[i].IsResolved)
                 {
-                    builder.AppendFormat(" {0} ", cells[i].ToString());
+                    builder.AppendFormat(" {0} ", puzzle[i].ToString());
                 }
                 else
                 {
@@ -81,15 +80,6 @@ namespace Sudoku
             builder.Append(string.Join('╩',
                 Enumerable.Repeat("═══╧═══╧═══", Puzzle.BoxLength))); // todo this only works for 3x3
             builder.AppendLine("╝");
-
-            if (printPossibilities)
-            {
-                foreach (var cell in cells)
-                {
-                    builder.AppendFormat("R{0}C{1}: {2}", cell.Row, cell.Column, string.Join("", cell.Value.ToHumanOptions()));
-                    builder.AppendLine();
-                }
-            }
 
             return builder.ToString();
 

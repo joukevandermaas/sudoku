@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace Sudoku
 {
@@ -167,6 +168,26 @@ namespace Sudoku
             _ => throw new NotImplementedException(),
         };
 
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+
+            for (int i = 0; i < _cells.Length; i++)
+            {
+                var cell = _cells[i];
+
+                if (cell.IsResolved)
+                {
+                    builder.Append(cell.Value.ToHumanValue());
+                }
+                else
+                {
+                    builder.Append(0);
+                }
+            }
+
+            return builder.ToString();
+        }
 
         public override bool Equals(object? obj)
         {
