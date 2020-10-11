@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Sudoku
@@ -86,6 +88,9 @@ namespace Sudoku
             return (false, puzzle, null);
         }
 
+        static int successes = 0;
+        static int failures = 0;
+
         private (bool, Puzzle) AttemptBruteForce(in Puzzle puzzle, int depth)
         {
             if (depth > _maxBruteForceDepth)
@@ -93,13 +98,19 @@ namespace Sudoku
                 return (false, puzzle);
             }
 
-            var cells = puzzle.Cells;
+            var options = ArrayPool<SudokuValues>.Shared.Rent(Puzzle.LineLength);
 
-            foreach (var cell in cells)
+            bool success = false;
+            var endResult = puzzle;
+
+            const int size = Puzzle.LineLength * Puzzle.LineLength;
+            for (int i = 0; i < size; i++)
             {
-                var options = cell.Value.GetOptions().ToList();
+                var cell = puzzle[i];
 
-                if (options.Count != 2)
+                var count = cell.Value.CopyValues(options);
+
+                if (count != 2)
                 {
                     continue;
                 }
@@ -111,19 +122,28 @@ namespace Sudoku
 
                 if (result == SolveResult.Success)
                 {
-                    return (true, resultPuzzle);
+                    successes++;
+                    success = true;
+                    endResult = resultPuzzle;
+                    break;
                 }
                 else if (result == SolveResult.Invalid)
                 {
+                    failures++;
                     // it must be the other option
+                    success = true;
                     var correctCell = cell.SetValue(options[1]);
-                    return (true, puzzle.UpdateCell(correctCell));
+                    endResult = puzzle.UpdateCell(correctCell);
+
+                    break;
                 }
             }
 
             // didn't find any cell to brute force, or there
             // was no outcome
-            return (false, puzzle);
+            ArrayPool<SudokuValues>.Shared.Return(options);
+
+            return (success, endResult);
         }
     }
 }
