@@ -7,20 +7,20 @@ namespace Sudoku
 {
     internal class HiddenTupleStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var updatedCells = new List<Cell>();
             var regions = puzzle.Regions.ToArray();
 
-            for (int tupleSize = 2; tupleSize < 5; tupleSize++)
+            foreach (var region in regions)
             {
-                var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+                var placedDigits = region.GetPlacedDigits();
 
-                foreach (var region in regions)
+                for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
                 {
-                    var (succes, newPuzzle) = FindHiddenTuple(updatedCells, puzzle, region, tupleSize, combinations);
+                    var (success, newPuzzle) = FindTuple(puzzle, updatedCells, region, placedDigits, tupleSize);
 
-                    if (succes)
+                    if (success)
                     {
                         return (true, newPuzzle);
                     }
@@ -30,13 +30,15 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) FindHiddenTuple(List<Cell> updatedCells, Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
+        private static (bool, Puzzle) FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits, int tupleSize)
         {
+            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+
             for (int i = 0; i < combinations.Length; i++)
             {
                 var comb = combinations[i];
 
-                if (region.AnyDigitPlaced(comb))
+                if (placedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -69,7 +71,9 @@ namespace Sudoku
 
                 if (updatedCells.Count > 0)
                 {
+#if DEBUG
                     Program.DebugText = $"Hidden {comb} tuple in {region}";
+#endif
 
                     var newPuzzle = puzzle.UpdateCells(updatedCells);
                     return (true, newPuzzle);
@@ -78,6 +82,5 @@ namespace Sudoku
 
             return (false, puzzle);
         }
-
     }
 }

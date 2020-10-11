@@ -24,8 +24,12 @@ namespace Sudoku
         const string swordfish = "070040200000300079506090400000400050007000300030008000001060703760009000002010080";
         const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
 
+#if DEBUG
         public static int HighlightDigit = 0;
         public static string DebugText = string.Empty;
+#endif
+
+        private const bool _profiling = false;
 
         private static ISolveStrategy[] _strategies = new ISolveStrategy[]
         {
@@ -53,13 +57,34 @@ namespace Sudoku
                     fileName = args[0];
                 }
 
-                var puzzles = File.ReadAllLines(fileName).Select(p => new Puzzle(p)).ToList();
+                var puzzles = File.ReadAllLines(fileName).Select(p => Puzzle.FromString(p)).ToList();
 
-                SolveMany(puzzles, false);
+                // warmup run
+                SolveMany(puzzles, printResults: false, parallel: false);
+
+                Console.WriteLine("No parallelism:");
+
+                const int count = _profiling ? 1 : 5;
+                var times = new List<TimeSpan>(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var time = SolveMany(puzzles, printResults: true, parallel: false);
+                    times.Add(time);
+                }
+
+                var totalMillis = times.Aggregate(TimeSpan.Zero, (total, current) => total + current).TotalMilliseconds;
+                Console.WriteLine("Average time: {0}", totalMillis / count);
+
+                //Console.WriteLine("With parallelism:");
+                //for (int i = 0; i < 5; i++)
+                //{
+                //    SolveMany(puzzles, printResults: true, parallel: true);
+                //}
             }
         }
 
-        private static void SolveMany(List<Puzzle> puzzles, bool parallel)
+        private static TimeSpan SolveMany(List<Puzzle> puzzles, bool printResults, bool parallel)
         {
             var results = new (TimeSpan time, bool success)[puzzles.Count];
 
@@ -87,14 +112,19 @@ namespace Sudoku
             var totalTime = results.Aggregate(TimeSpan.Zero, (total, current) => total + current.time);
             var successCount = results.Aggregate(0, (total, current) => total += (current.success ? 1 : 0));
 
-            Console.WriteLine("Solved {0}/{1} in {2}ms (wall time {3}ms)",
-                successCount,
-                puzzles.Count,
-                totalTime.TotalMilliseconds,
-                watch.ElapsedMilliseconds);
+            if (printResults)
+            {
+                Console.WriteLine("Solved {0}/{1} in {2:000.00}ms (wall time {3:000.00}ms)",
+                    successCount,
+                    puzzles.Count,
+                    totalTime.TotalMilliseconds,
+                    watch.Elapsed.TotalMilliseconds);
+            }
+
+            return totalTime;
         }
 
-        static (TimeSpan, bool, Puzzle) SolveFast(Puzzle puzzle)
+        static (TimeSpan, bool, Puzzle) SolveFast(in Puzzle puzzle)
         {
             var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 3, _strategies);
 
@@ -107,7 +137,8 @@ namespace Sudoku
 
         static void SolveDebug(string sudoku)
         {
-            var puzzle = new Puzzle(sudoku);
+#if DEBUG
+            var puzzle = Puzzle.FromString(sudoku);
 
             var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 0, _strategies);
 
@@ -169,6 +200,7 @@ namespace Sudoku
 
             Console.WriteLine(Printer.ForConsole(puzzle));
             Console.WriteLine(status);
+#endif
         }
 
         private const string _htmlStart = @"<!doctype html>

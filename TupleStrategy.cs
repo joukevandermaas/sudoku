@@ -10,18 +10,18 @@ namespace Sudoku
     /// </summary>
     internal class TupleStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var updatedCells = new List<Cell>();
             var regions = puzzle.Regions.ToArray();
 
-            for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
+            foreach (var region in regions)
             {
-                var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+                var placedDigits = region.GetPlacedDigits();
 
-                foreach (var region in regions)
+                for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
                 {
-                    var (success, newPuzzle) = ScanRegion(updatedCells, puzzle, region, tupleSize, combinations);
+                    var (success, newPuzzle) = FindTuple(puzzle, updatedCells, region, placedDigits, tupleSize);
 
                     if (success)
                     {
@@ -33,13 +33,15 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) ScanRegion(List<Cell> updatedCells, Puzzle puzzle, Region region, int tupleSize, SudokuValues[] combinations)
+        private static (bool, Puzzle) FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits, int tupleSize)
         {
+            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+
             for (int j = 0; j < combinations.Length; j++)
             {
                 var comb = combinations[j];
 
-                if (region.AnyDigitPlaced(comb))
+                if (placedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -76,7 +78,7 @@ namespace Sudoku
                         {
                             continue;
                         }
-                        
+
                         if (comb.HasAnyOptions(SudokuValues.FromIndex(i)))
                         {
                             continue;
@@ -87,7 +89,10 @@ namespace Sudoku
 
                     if (updatedCells.Count > 0)
                     {
+#if DEBUG
                         Program.DebugText = $"{possibleValues} tuple in {region}.";
+#endif
+
                         return (true, puzzle.UpdateCells(updatedCells));
                     }
                 }

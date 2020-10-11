@@ -2,7 +2,7 @@
 
 namespace Sudoku
 {
-    struct Cell : IEquatable<Cell>
+    internal readonly struct Cell : IEquatable<Cell>
     {
         public SudokuValues Value { get; }
 
@@ -24,7 +24,9 @@ namespace Sudoku
 
         public Cell SetValue(SudokuValues value)
         {
+#if DEBUG
             if (IsResolved) throw new InvalidOperationException("Trying to set value of resolved cell");
+#endif
 
             return new Cell(value, Index);
         }

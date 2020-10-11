@@ -8,7 +8,7 @@ namespace Sudoku
     /// </summary>
     internal class BoxLayoutStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var updates = new List<Cell>(Puzzle.LineLength);
 
@@ -40,8 +40,10 @@ namespace Sudoku
 
                         if (success)
                         {
+#if DEBUG
                             Program.HighlightDigit = digit;
                             Program.DebugText = $"{digit}s in {box} remove others in {region}.";
+#endif
 
                             return (true, newPuzzle);
                         }
@@ -53,8 +55,10 @@ namespace Sudoku
 
                         if (success)
                         {
+#if DEBUG
                             Program.HighlightDigit = digit;
                             Program.DebugText = $"{digit}s in {box} remove others in {region}.";
+#endif
 
                             return (true, newPuzzle);
                         }
@@ -66,7 +70,7 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) RemoveFromOtherBoxesInRegion(List<Cell> updates, Puzzle puzzle, Region region, SudokuValues value, int boxIndex)
+        private (bool, Puzzle) RemoveFromOtherBoxesInRegion(List<Cell> updates, in Puzzle puzzle, Region region, SudokuValues value, int boxIndex)
         {
             for (int i = 0; i < Puzzle.LineLength; i++)
             {

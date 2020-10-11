@@ -4,10 +4,10 @@ namespace Sudoku
 {
     internal class SingleStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var cells = puzzle.Cells.ToArray();
-            var regions = new UniqueQueue<Region>(Puzzle.LineLength);
+            var regions = new RegionQueue();
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
@@ -27,25 +27,19 @@ namespace Sudoku
                 anySuccess = ScanRegion(regions, cells, region) || anySuccess;
             }
 
-            puzzle = new Puzzle(cells);
+            if (anySuccess)
+            {
+                var newPuzzle = new Puzzle(cells);
+                return (true, newPuzzle);
+            }
 
-            return (anySuccess, puzzle);
+            return (false, puzzle);
         }
 
-        private bool ScanRegion(UniqueQueue<Region> regions, Cell[] cells, Region region)
+        private bool ScanRegion(RegionQueue regions, Cell[] cells, Region region)
         {
-            var placedDigits = SudokuValues.None;
+            var placedDigits = region.GetPlacedDigits();
             var removedOptions = false;
-
-            for (int i = 0; i < Puzzle.LineLength; i++)
-            {
-                var cell = region[i];
-
-                if (cell.IsResolved)
-                {
-                    placedDigits = placedDigits.AddOptions(cell.Value);
-                }
-            }
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {

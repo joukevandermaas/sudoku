@@ -12,7 +12,7 @@ namespace Sudoku
         Box
     }
 
-    struct Region : IEnumerable<Cell>, IEquatable<Region>
+    internal readonly struct Region : IEnumerable<Cell>, IEquatable<Region>
     {
         private readonly Cell[] _allCells;
 
@@ -27,7 +27,7 @@ namespace Sudoku
 
         public int Index { get; }
 
-        public Cell this[int i]
+        public ref Cell this[int i]
         {
             get
             {
@@ -61,7 +61,7 @@ namespace Sudoku
                         throw new NotImplementedException();
                 }
 
-                return _allCells[offset];
+                return ref _allCells[offset];
             }
         }
 

@@ -5,7 +5,7 @@ namespace Sudoku
 {
     internal class SwordfishStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             var potentialRegions = new List<(Region region, SudokuValues positions)>();
             var updatedCells = new List<Cell>();
@@ -33,7 +33,7 @@ namespace Sudoku
             return (false, puzzle);
         }
 
-        private (bool, Puzzle) FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, Puzzle puzzle, RegionType type, int digit, int fishSize)
+        private (bool, Puzzle) FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, in Puzzle puzzle, RegionType type, int digit, int fishSize)
         {
             potentialRegions.Clear();
 
@@ -130,8 +130,11 @@ namespace Sudoku
 
             if (updatedCells.Count > 0)
             {
+#if DEBUG
                 Program.HighlightDigit = digit;
                 Program.DebugText = $"Fish of size {fishSize} in {string.Join(", ", regions)}.";
+#endif
+
                 return (true, puzzle.UpdateCells(updatedCells));
             }
 

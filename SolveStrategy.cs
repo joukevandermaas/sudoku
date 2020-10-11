@@ -2,6 +2,6 @@
 {
     interface ISolveStrategy
     {
-        (bool, Puzzle) Apply(Puzzle puzzle);
+        (bool, Puzzle) Apply(in Puzzle puzzle);
     }
 }

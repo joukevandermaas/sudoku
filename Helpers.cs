@@ -6,18 +6,20 @@ namespace Sudoku
     {
         private static ConcurrentDictionary<(int, int), SudokuValues[]> _combinationCache = new ConcurrentDictionary<(int, int), SudokuValues[]>();
 
-        public static bool AnyDigitPlaced(this Region region, SudokuValues digits)
+        public static SudokuValues GetPlacedDigits(this Region region)
         {
+            var placedDigits = SudokuValues.None;
+
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
                 var cell = region[i];
-                if (cell.IsResolved && cell.Value.HasAnyOptions(digits))
+                if (cell.IsResolved)
                 {
-                    return true;
+                    placedDigits = placedDigits.AddOptions(cell.Value);
                 }
             }
 
-            return false;
+            return placedDigits;
         }
 
         public static SudokuValues GetPositions(this Region region, SudokuValues digits)

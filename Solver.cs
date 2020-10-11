@@ -24,7 +24,7 @@ namespace Sudoku
             _maxBruteForceDepth = maxBruteForceDepth;
         }
 
-        public (SolveResult, Puzzle) Solve(Puzzle puzzle)
+        public (SolveResult, Puzzle) Solve(in Puzzle puzzle)
         {
             return Solve(puzzle, 1);
         }
@@ -86,7 +86,7 @@ namespace Sudoku
             return (false, puzzle, null);
         }
 
-        private (bool, Puzzle) AttemptBruteForce(Puzzle puzzle, int depth)
+        private (bool, Puzzle) AttemptBruteForce(in Puzzle puzzle, int depth)
         {
             if (depth > _maxBruteForceDepth)
             {

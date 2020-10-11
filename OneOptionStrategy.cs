@@ -4,7 +4,7 @@ namespace Sudoku
 {
     internal class OneOptionStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(Puzzle puzzle)
+        public (bool, Puzzle) Apply(in Puzzle puzzle)
         {
             // we copy the cells so we can mutate the array directly
             var cells = puzzle.Cells.ToArray();
@@ -15,9 +15,13 @@ namespace Sudoku
                 anySuccess = ScanRegion(cells, region) || anySuccess;
             }
 
-            puzzle = new Puzzle(cells);
+            if (anySuccess)
+            {
+                var newPuzzle = new Puzzle(cells);
+                return (true, newPuzzle);
+            }
 
-            return (anySuccess, puzzle);
+            return (false, puzzle);
         }
 
         private bool ScanRegion(Cell[] cells, Region region)

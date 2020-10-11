@@ -1,40 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace Sudoku
 {
-    struct Puzzle : IEquatable<Puzzle>
+    internal readonly struct Puzzle : IEquatable<Puzzle>
     {
         public const int LineLength = 9;
         public const int BoxLength = 3;
 
         private readonly Cell[] _cells;
-        private List<Region>? _rows;
-        private List<Region>? _columns;
-        private List<Region>? _boxes;
+        private readonly Region[] _rows;
+        private readonly Region[] _columns;
+        private readonly Region[] _boxes;
 
-        public Puzzle(string puzzle)
+        public ReadOnlyCollection<Region> Rows => Array.AsReadOnly(_rows);
+        public ReadOnlyCollection<Region> Columns => Array.AsReadOnly(_columns);
+        public ReadOnlyCollection<Region> Boxes => Array.AsReadOnly(_boxes);
+
+        public static Puzzle FromString(string puzzle)
         {
-            _cells = new Cell[LineLength * LineLength];
+            var cells = new Cell[LineLength * LineLength];
 
-            for (var i = 0; i < _cells.Length; i++)
+            for (var i = 0; i < cells.Length; i++)
             {
                 var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), i);
-                _cells[i] = cell;
+                cells[i] = cell;
             }
 
-            _rows = null;
-            _columns = null;
-            _boxes = null;
+            return new Puzzle(cells);
         }
 
         public Puzzle(Cell[] cells)
         {
             _cells = cells;
-            _rows = null;
-            _columns = null;
-            _boxes = null;
+
+            _rows = new Region[LineLength];
+            _columns = new Region[LineLength];
+            _boxes = new Region[LineLength];
+
+            for (int i = 0; i < LineLength; i++)
+            {
+                _rows[i] = new Region(_cells, RegionType.Row, i);
+                _columns[i] = new Region(_cells, RegionType.Column, i);
+                _boxes[i] = new Region(_cells, RegionType.Box, i);
+            }
         }
 
         public bool IsSolved => _cells.All(c => c.IsResolved);
@@ -57,7 +68,7 @@ namespace Sudoku
             }
         }
 
-        public IEnumerable<Cell> Cells => _cells;
+        public ReadOnlyCollection<Cell> Cells => Array.AsReadOnly(_cells);
 
         public Puzzle UpdateCell(Cell newValue)
         {
@@ -82,14 +93,27 @@ namespace Sudoku
             return new Puzzle(newCells);
         }
 
-        public IEnumerable<Region> Regions => Rows.Concat(Columns).Concat(Boxes);
+        public IEnumerable<Region> Regions
+        {
+            get
+            {
+                for (int i = 0; i < 3 * LineLength; i++)
+                {
+                    var index = i % LineLength;
+                    var type = (RegionType)((i / LineLength) + 1);
+
+                    yield return GetRegion(type, index);
+                }
+            }
+        }
 
         public Region GetRow(int index) => GetRegion(RegionType.Row, index);
         public Region GetColumn(int index) => GetRegion(RegionType.Column, index);
         public Region GetBox(int index) => GetRegion(RegionType.Box, index);
 
         public Region GetRegion(RegionType type, int index) => new Region(_cells, type, index);
-        public IEnumerable<Region> GetRegions(RegionType type) => type switch
+
+        public ReadOnlyCollection<Region> GetRegions(RegionType type) => type switch
         {
             RegionType.Row => Rows,
             RegionType.Column => Columns,
@@ -97,62 +121,6 @@ namespace Sudoku
             _ => throw new NotImplementedException(),
         };
 
-        public IEnumerable<Region> Rows
-        {
-            get
-            {
-                if (_rows != null)
-                {
-                    return _rows;
-                }
-
-                _rows = new List<Region>(LineLength);
-                for (int i = 0; i < LineLength; i++)
-                {
-                    _rows.Add(GetRow(i));
-                }
-
-                return _rows;
-            }
-        }
-
-        public IEnumerable<Region> Columns
-        {
-            get
-            {
-                if (_columns != null)
-                {
-                    return _columns;
-                }
-
-                _columns = new List<Region>(LineLength);
-                for (int i = 0; i < LineLength; i++)
-                {
-                    _columns.Add(GetColumn(i));
-                }
-
-                return _columns;
-            }
-        }
-
-        public IEnumerable<Region> Boxes
-        {
-            get
-            {
-                if (_boxes != null)
-                {
-                    return _boxes;
-                }
-
-                _boxes = new List<Region>(LineLength);
-                for (int i = 0; i < LineLength; i++)
-                {
-                    _boxes.Add(GetBox(i));
-                }
-
-                return _boxes;
-            }
-        }
 
         public override bool Equals(object? obj)
         {
