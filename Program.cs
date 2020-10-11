@@ -126,7 +126,7 @@ namespace Sudoku
 
         static (TimeSpan, bool, Puzzle) SolveFast(in Puzzle puzzle)
         {
-            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 3, _strategies);
+            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 5, _strategies);
 
             var time = Stopwatch.StartNew();
             var (result, solvedPuzzle) = solver.Solve(puzzle);

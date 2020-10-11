@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 
 namespace Sudoku
@@ -88,9 +89,6 @@ namespace Sudoku
             return (false, puzzle, null);
         }
 
-        static int successes = 0;
-        static int failures = 0;
-
         private (bool, Puzzle) AttemptBruteForce(in Puzzle puzzle, int depth)
         {
             if (depth > _maxBruteForceDepth)
@@ -98,52 +96,63 @@ namespace Sudoku
                 return (false, puzzle);
             }
 
-            var options = ArrayPool<SudokuValues>.Shared.Rent(Puzzle.LineLength);
+            var optionsArray = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
 
-            bool success = false;
-            var endResult = puzzle;
-
-            const int size = Puzzle.LineLength * Puzzle.LineLength;
-            for (int i = 0; i < size; i++)
+            foreach (var region in puzzle.Regions)
             {
-                var cell = puzzle[i];
+                var placedDigits = region.GetPlacedDigits();
 
-                var count = cell.Value.CopyValues(options);
-
-                if (count != 2)
+                for (int i = 1; i < Puzzle.LineLength; i++)
                 {
-                    continue;
-                }
+                    var value = SudokuValues.FromHumanValue(i);
 
-                var newCell = cell.SetValue(options[0]);
-                var newPuzzle = puzzle.UpdateCell(newCell);
+                    if (placedDigits.HasAnyOptions(value))
+                    {
+                        continue;
+                    }
 
-                var (result, resultPuzzle) = Solve(newPuzzle, depth + 1);
+                    var (success, newPuzzle) = EvaluateOptions(puzzle, depth, optionsArray, region, value);
 
-                if (result == SolveResult.Success)
-                {
-                    successes++;
-                    success = true;
-                    endResult = resultPuzzle;
-                    break;
-                }
-                else if (result == SolveResult.Invalid)
-                {
-                    failures++;
-                    // it must be the other option
-                    success = true;
-                    var correctCell = cell.SetValue(options[1]);
-                    endResult = puzzle.UpdateCell(correctCell);
+                    if (success)
+                    {
+                        ArrayPool<int>.Shared.Return(optionsArray);
 
-                    break;
+                        return (true, newPuzzle);
+                    }
                 }
             }
 
-            // didn't find any cell to brute force, or there
-            // was no outcome
-            ArrayPool<SudokuValues>.Shared.Return(options);
+            ArrayPool<int>.Shared.Return(optionsArray);
+            return (false, puzzle);
+        }
 
-            return (success, endResult);
+        private (bool, Puzzle) EvaluateOptions(Puzzle puzzle, int depth, int[] optionsArray, Region region, SudokuValues value)
+        {
+            var options = region.GetPositions(value);
+            var count = options.CopyIndices(optionsArray);
+
+            if (count != 2)
+            {
+                return (false, puzzle);
+            }
+
+            var possiblePuzzle = puzzle.UpdateCell(region[optionsArray[0]].SetValue(value));
+
+            var (result, resultPuzzle) = Solve(possiblePuzzle, depth + 1);
+
+            if (result == SolveResult.Success)
+            {
+                return (true, resultPuzzle);
+            }
+            else if (result == SolveResult.Invalid)
+            {
+                // it must be the other option
+                var newPuzzle = puzzle.UpdateCell(region[optionsArray[1]].SetValue(value));
+
+                return (true, newPuzzle);
+            }
+
+            return (false, puzzle);
         }
     }
 }
