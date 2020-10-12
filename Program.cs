@@ -34,7 +34,6 @@ namespace Sudoku
 
         private static ISolveStrategy[] _strategies = new ISolveStrategy[]
         {
-            new SingleStrategy(),
             new BoxLayoutStrategy(),
             new HiddenTupleStrategy(),
             new TupleStrategy(),
@@ -64,7 +63,7 @@ namespace Sudoku
 
                 Console.WriteLine("No parallelism:");
 
-                const int count = _profiling ? 1 : 5;
+                const int count = _profiling ? 1 : 10;
                 var times = new List<TimeSpan>(count);
 
                 for (int i = 0; i < count; i++)

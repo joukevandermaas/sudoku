@@ -35,7 +35,7 @@ namespace Sudoku
 
                     if (rows.IsSingle)
                     {
-                        var region = puzzle.GetRow(rows.ToIndex());
+                        var region = puzzle.Rows[rows.ToIndex()];
                         var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
 
                         if (success)
@@ -50,7 +50,7 @@ namespace Sudoku
                     }
                     if (cols.IsSingle)
                     {
-                        var region = puzzle.GetColumn(cols.ToIndex());
+                        var region = puzzle.Columns[cols.ToIndex()];
                         var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
 
                         if (success)

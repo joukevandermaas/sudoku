@@ -11,10 +11,11 @@ namespace Sudoku
         public const int BoxLength = 3;
 
         private readonly Cell[] _cells;
+        private readonly Region[] _regions;
 
-        public ReadOnlyCollection<Region> Rows { get; }
-        public ReadOnlyCollection<Region> Columns { get; }
-        public ReadOnlyCollection<Region> Boxes { get; }
+        public IReadOnlyList<Region> Rows => new ArraySegment<Region>(_regions, 0, LineLength);
+        public IReadOnlyList<Region> Columns => new ArraySegment<Region>(_regions, LineLength, LineLength);
+        public IReadOnlyList<Region> Boxes => new ArraySegment<Region>(_regions, LineLength * 2, LineLength);
 
         public static Puzzle FromString(string puzzle)
         {
@@ -33,20 +34,14 @@ namespace Sudoku
         {
             _cells = cells;
 
-            var rows = new Region[LineLength];
-            var columns = new Region[LineLength];
-            var boxes = new Region[LineLength];
+            _regions = new Region[LineLength * 3];
 
             for (int i = 0; i < LineLength; i++)
             {
-                rows[i] = new Region(_cells, RegionType.Row, i);
-                columns[i] = new Region(_cells, RegionType.Column, i);
-                boxes[i] = new Region(_cells, RegionType.Box, i);
+                _regions[i] = new Region(_cells, RegionType.Row, i);
+                _regions[i + LineLength] = new Region(_cells, RegionType.Column, i);
+                _regions[i + (LineLength * 2)] = new Region(_cells, RegionType.Box, i);
             }
-
-            Rows = Array.AsReadOnly(rows);
-            Columns = Array.AsReadOnly(columns);
-            Boxes = Array.AsReadOnly(boxes);
         }
 
         public bool IsSolved
@@ -140,27 +135,17 @@ namespace Sudoku
             return new Puzzle(newCells);
         }
 
-        public IEnumerable<Region> Regions
+        public IEnumerable<Region> Regions => _regions;
+
+        public Region GetRegion(RegionType type, int index) => type switch
         {
-            get
-            {
-                for (int i = 0; i < 3 * LineLength; i++)
-                {
-                    var index = i % LineLength;
-                    var type = (RegionType)((i / LineLength) + 1);
+            RegionType.Row => Rows[index],
+            RegionType.Column => Columns[index],
+            RegionType.Box => Boxes[index],
+            _ => throw new NotImplementedException()
+        };
 
-                    yield return GetRegion(type, index);
-                }
-            }
-        }
-
-        public Region GetRow(int index) => GetRegion(RegionType.Row, index);
-        public Region GetColumn(int index) => GetRegion(RegionType.Column, index);
-        public Region GetBox(int index) => GetRegion(RegionType.Box, index);
-
-        public Region GetRegion(RegionType type, int index) => new Region(_cells, type, index);
-
-        public ReadOnlyCollection<Region> GetRegions(RegionType type) => type switch
+        public IReadOnlyList<Region> GetRegions(RegionType type) => type switch
         {
             RegionType.Row => Rows,
             RegionType.Column => Columns,
