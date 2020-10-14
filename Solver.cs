@@ -75,7 +75,15 @@ namespace Sudoku
 
         public (bool, Puzzle, ISolveStrategy?) Advance(Puzzle puzzle)
         {
-            (_, puzzle) = RemoveInvalidOptions(puzzle);
+            bool digitsSuccess;
+            (digitsSuccess, puzzle) = RemoveInvalidOptions(puzzle);
+
+#if DEBUG
+            if (digitsSuccess)
+            {
+                return (digitsSuccess, puzzle, null);
+            }
+#endif
 
             foreach (var strat in _strategies)
             {

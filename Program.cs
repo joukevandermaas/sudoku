@@ -15,7 +15,8 @@ namespace Sudoku
 
         const string veryEasy = "090000070200070005500106008008907100000050000009308400600705004900060002040000010";
         const string ctc1 = "000000012000000345000003670000081500000754000004230000067900000312000000850000000";
-        const string ctc2 = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
+        const string sunset = "000000000009800007080060050050040030007900002000000000002700009040050060300006200";
+        const string trex = "800000200010000090003000008001700003090010060500020100007060004060090010400008500";
         const string ctc3 = "000490000008020004060500070054000600000000000009000580030002090500080300000073000";
         const string ctc4 = "000000000100002300040050060060070010200003800000000007009500000050060070300008200";
         const string xwing = "600090007040007100002800050800000090000070000030000008050002300004500020900030504";
@@ -44,7 +45,7 @@ namespace Sudoku
         {
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
-                const string puzzle = bruteforce;
+                const string puzzle = trex;
                 SolveDebug(puzzle);
             }
             else
@@ -154,7 +155,7 @@ namespace Sudoku
 
                 if (success)
                 {
-                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat!.GetType());
+                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat?.GetType().Name ?? "digits");
                     if (!string.IsNullOrEmpty(DebugText))
                     {
                         builder.AppendFormat("<p>{0}</p>", DebugText);
