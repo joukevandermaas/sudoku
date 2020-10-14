@@ -2,7 +2,7 @@
   "profiles": {
     "sudoku": {
       "commandName": "Project",
-      "workingDirectory": "$(solutionDir)"
+      "workingDirectory": "$(solutionDir)/Solver"
     }
   }
 }
