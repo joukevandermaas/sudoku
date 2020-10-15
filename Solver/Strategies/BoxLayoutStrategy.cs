@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Sudoku
 {
@@ -6,15 +7,15 @@ namespace Sudoku
     /// Finds cases where all options for a digit in a row/column are in the
     /// same box. Other occurences of that digit can be removed from the box.
     /// </summary>
-    internal class BoxLayoutStrategy : ISolveStrategy
+    public class BoxLayoutStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(in Puzzle puzzle)
+        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
             var updates = new List<Cell>(Puzzle.LineLength);
 
-            foreach (var box in puzzle.Boxes)
+            while (unprocessedRegions.TryDequeueOfType(RegionType.Box, out int boxIndex))
             {
-                var boxIndex = box[0].Box;
+                var box = puzzle.Boxes[boxIndex];
 
                 for (int digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
@@ -36,41 +37,40 @@ namespace Sudoku
                     if (rows.IsSingle)
                     {
                         var region = puzzle.Rows[rows.ToIndex()];
-                        var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
+                        RemoveFromOtherBoxesInRegion(updates, region, value, boxIndex);
 
-                        if (success)
+                        if (updates.Count > 0)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
-                            Program.DebugText = $"{digit}s in {box} remove others in {region}.";
+                            Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
 
-                            return (true, newPuzzle);
+                            return new ChangeSet(updates);
                         }
                     }
                     if (cols.IsSingle)
                     {
                         var region = puzzle.Columns[cols.ToIndex()];
-                        var (success, newPuzzle) = RemoveFromOtherBoxesInRegion(updates, puzzle, region, value, boxIndex);
+                        RemoveFromOtherBoxesInRegion(updates, region, value, boxIndex);
 
-                        if (success)
+                        if (updates.Count > 0)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
-                            Program.DebugText = $"{digit}s in {box} remove others in {region}.";
+                            Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
-
-                            return (true, newPuzzle);
+                            return new ChangeSet(updates);
                         }
 
                     }
                 }
             }
 
-            return (false, puzzle);
+            return ChangeSet.Empty;
         }
 
-        private (bool, Puzzle) RemoveFromOtherBoxesInRegion(List<Cell> updates, in Puzzle puzzle, Region region, SudokuValues value, int boxIndex)
+        private void RemoveFromOtherBoxesInRegion(List<Cell> updates, Region region, SudokuValues value, int boxIndex)
         {
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
@@ -85,13 +85,6 @@ namespace Sudoku
                     updates.Add(cell.RemoveOptions(value));
                 }
             }
-
-            if (updates.Count > 0)
-            {
-                return (true, puzzle.UpdateCells(updates));
-            }
-
-            return (false, puzzle);
         }
 
     }

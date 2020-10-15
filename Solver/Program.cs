@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Sudoku
 {
-    class Program
+    public class Program
     {
         const string moderate = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string easy2 = "094000130000000000000076002080010000032000000000200060000050400000008007006304008";
@@ -26,26 +26,22 @@ namespace Sudoku
         const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string bruteforce = "300060005020000040007000200000607000900080006000901000002000700040000010600050009";
 
+        const string currentPuzzle = ctc3;
+
 #if DEBUG
         public static int HighlightDigit = 0;
-        public static string DebugText = string.Empty;
+        private static string _debugText = string.Empty;
+
+        public static void AddDebugText(string text) => _debugText += "<br>" + text;
 #endif
 
         private const bool _profiling = false;
-
-        private static ISolveStrategy[] _strategies = new ISolveStrategy[]
-        {
-            new BoxLayoutStrategy(),
-            new HiddenTupleStrategy(),
-            new TupleStrategy(),
-            new SwordfishStrategy(),
-        };
 
         static void Main(string[] args)
         {
             if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
             {
-                const string puzzle = trex;
+                const string puzzle = currentPuzzle;
                 SolveDebug(puzzle);
             }
             else
@@ -126,10 +122,10 @@ namespace Sudoku
 
         static (TimeSpan, bool, Puzzle) SolveFast(in Puzzle puzzle)
         {
-            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 5, _strategies);
+            var solver = new Solver(puzzle, maxSteps: 100, maxBruteForceDepth: 5);
 
             var time = Stopwatch.StartNew();
-            var (result, solvedPuzzle) = solver.Solve(puzzle);
+            var (result, solvedPuzzle) = solver.Solve();
             time.Stop();
 
             return (time.Elapsed, result == SolveResult.Success, solvedPuzzle);
@@ -139,8 +135,9 @@ namespace Sudoku
         {
 #if DEBUG
             var puzzle = Puzzle.FromString(sudoku);
+            var changeSet = ChangeSet.All(puzzle);
 
-            var solver = new Solver(maxSteps: 100, maxBruteForceDepth: 0, _strategies);
+            var solver = new Solver(puzzle, maxSteps: 100, maxBruteForceDepth: 0);
 
             var builder = new StringBuilder();
             builder.AppendLine(_htmlStart);
@@ -149,16 +146,17 @@ namespace Sudoku
             while (!puzzle.IsSolved && puzzle.IsValid)
             {
                 HighlightDigit = 0;
-                DebugText = string.Empty;
+                _debugText = string.Empty;
 
-                var (success, newPuzzle, strat) = solver.Advance(puzzle);
+                var (success, strat) = solver.Advance();
+                var newPuzzle = solver.CurrentPuzzle;
 
                 if (success)
                 {
-                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat?.GetType().Name ?? "digits");
-                    if (!string.IsNullOrEmpty(DebugText))
+                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat);
+                    if (!string.IsNullOrEmpty(_debugText))
                     {
-                        builder.AppendFormat("<p>{0}</p>", DebugText);
+                        builder.AppendFormat("<p>{0}</p>", _debugText);
                     }
                     builder.AppendLine();
 
@@ -203,7 +201,7 @@ namespace Sudoku
 #endif
         }
 
-        private const string _htmlStart = @"<!doctype html>
+        public const string _htmlStart = @"<!doctype html>
 
 <html>
   <head>
@@ -278,7 +276,7 @@ body {
   </head>
   <body>";
 
-        private const string _htmlEnd = @"
+        public const string _htmlEnd = @"
   </body>
 </html>";
     }

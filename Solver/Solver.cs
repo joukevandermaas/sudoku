@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sudoku
 {
@@ -14,42 +13,63 @@ namespace Sudoku
 
     class Solver
     {
-        private readonly ISolveStrategy[] _strategies;
         private readonly int _maxSteps;
         private readonly int _maxBruteForceDepth;
 
-        private RegionQueue _queue = new RegionQueue();
+        public Puzzle CurrentPuzzle { get; private set; }
 
-        public Solver(int maxSteps, int maxBruteForceDepth, IEnumerable<ISolveStrategy> strategies)
+        private readonly RegionQueue[] _regionQueues;
+        private readonly (ISolveStrategy strat, string name)[] _strategies = new (ISolveStrategy, string)[]
         {
-            _strategies = strategies.ToArray();
+            (new NakedSingleStrategy(), "digits"),
+            (new HiddenSingleStrategy(), "hidden single"),
+            (new BoxLayoutStrategy(), "box layout"),
+            (new HiddenTupleStrategy(2), "hidden pair"),
+            (new TupleStrategy(2), "pair"),
+            (new FishStrategy(2), "xwing"),
+            (new HiddenTupleStrategy(3), "hidden tripple"),
+            (new TupleStrategy(3), "tripple"),
+            (new FishStrategy(3), "swordfish"),
+            (new HiddenTupleStrategy(4), "hidden quadruple"),
+            (new TupleStrategy(4), "quadruple"),
+        };
+
+        public Solver(Puzzle puzzle, int maxSteps, int maxBruteForceDepth)
+        {
+            CurrentPuzzle = puzzle;
             _maxSteps = maxSteps;
             _maxBruteForceDepth = maxBruteForceDepth;
+
+            _regionQueues = new RegionQueue[_strategies.Length];
+
+            for (int i = 0; i < _regionQueues.Length; i++)
+            {
+                _regionQueues[i] = RegionQueue.GetFull();
+            }
         }
 
-        public (SolveResult, Puzzle) Solve(in Puzzle puzzle)
+
+        public (SolveResult, Puzzle) Solve()
         {
-            return Solve(puzzle, 1);
+            return Solve(1);
         }
 
-        private (SolveResult, Puzzle) Solve(Puzzle puzzle, int bruteForceDepth)
+        private (SolveResult, Puzzle) Solve(int bruteForceDepth)
         {
             var actualSteps = 0;
 
-            while (!puzzle.IsSolved && puzzle.IsValid)
+            while (!CurrentPuzzle.IsSolved && CurrentPuzzle.IsValid)
             {
                 if (actualSteps >= _maxSteps)
                 {
                     break;
                 }
 
-                var (success, newPuzzle, _) = Advance(puzzle);
-                puzzle = newPuzzle;
+                var (success, _) = Advance();
 
                 if (!success)
                 {
-                    (success, newPuzzle) = AttemptBruteForce(puzzle, bruteForceDepth);
-                    puzzle = newPuzzle;
+                    success = AttemptBruteForce(bruteForceDepth);
 
                     if (!success)
                     {
@@ -61,143 +81,61 @@ namespace Sudoku
 
             SolveResult result;
 
-            if (puzzle.IsSolved)
+            if (CurrentPuzzle.IsSolved)
             {
                 result = SolveResult.Success;
             }
             else
             {
-                result = !puzzle.IsValid ? SolveResult.Invalid : SolveResult.Failure;
+                result = !CurrentPuzzle.IsValid ? SolveResult.Invalid : SolveResult.Failure;
             }
 
-            return (result, puzzle);
+            return (result, CurrentPuzzle);
         }
 
-        public (bool, Puzzle, ISolveStrategy?) Advance(Puzzle puzzle)
+        public (bool success, string? method) Advance()
         {
-            bool digitsSuccess;
-            (digitsSuccess, puzzle) = RemoveInvalidOptions(puzzle);
-
-#if DEBUG
-            if (digitsSuccess)
+            for (int i = 0; i < _strategies.Length; i++)
             {
-                return (digitsSuccess, puzzle, null);
-            }
+                var (strat, name) = _strategies[i];
+                var workQueue = _regionQueues[i];
+#if DEBUG
+                    Program.AddDebugText($"{name} is considering regions: {workQueue}");
 #endif
 
-            foreach (var strat in _strategies)
-            {
-                var (success, newPuzzle) = strat.Apply(puzzle);
-                puzzle = newPuzzle;
+                var changeSet = strat.Apply(CurrentPuzzle, workQueue);
 
-                if (success)
+                if (changeSet != ChangeSet.Empty)
                 {
-                    return (true, puzzle, strat);
-                }
-            }
+#if DEBUG
+                    Program.AddDebugText($"<br>{name} changed regions: {changeSet}");
+#endif
 
-            return (false, puzzle, null);
-        }
+                    var newPuzzle = changeSet.ApplyTo(CurrentPuzzle);
+                    CurrentPuzzle = newPuzzle;
 
-        public (bool, Puzzle) RemoveInvalidOptions(in Puzzle puzzle)
-        {
-            var cells = puzzle.Cells.ToArray();
-            // this puzzle is "mutable" in the sense that we have
-            // a reference to its internal cell array. we must
-            // not let this reference escape this scope.
-            var mutablePuzzle = new Puzzle(cells);
-
-            foreach (var region in mutablePuzzle.Regions)
-            {
-                _queue.Enqueue(region);
-            }
-
-            var anySuccess = false;
-
-            // keep scanning regions for naked singles, removing
-            // options when digits are placed. when a digit is placed,
-            // its box, row and column are added back to 'regions' so
-            // they can be scanned again.
-            while (_queue.TryDequeue(out var region))
-            {
-                anySuccess = ScanRegionForInvalidOptions(mutablePuzzle, cells, region) || anySuccess;
-            }
-
-            if (anySuccess)
-            {
-                // we're done mutating, so we can just return the
-                // puzzle now.
-                return (true, mutablePuzzle);
-            }
-
-            return (false, puzzle);
-        }
-
-        private bool ScanRegionForInvalidOptions(Puzzle puzzle, Cell[] cells, Region region)
-        {
-            var placedDigits = region.GetPlacedDigits();
-            var removedOptions = false;
-
-            for (int i = 0; i < Puzzle.LineLength; i++)
-            {
-                var cell = region[i];
-
-                if (cell.HasOptions(placedDigits))
-                {
-                    var newCell = cell.RemoveOptions(placedDigits);
-                    cells[cell.Index] = newCell;
-
-                    if (newCell.IsResolved)
+                    for (int j = 0; j < _regionQueues.Length; j++)
                     {
-                        // since we have placed a digit we must
-                        // scan these regions again
-                        _queue.Enqueue(puzzle.Rows[newCell.Row]);
-                        _queue.Enqueue(puzzle.Columns[newCell.Column]);
-                        _queue.Enqueue(puzzle.Boxes[newCell.Box]);
+                        changeSet.ApplyTo(_regionQueues[j]);
                     }
 
-                    removedOptions = true;
-                }
-
-                // we now interpret i as a digit instead and check if it only
-                // has one position in the region (then we can place it)
-                var digit = SudokuValues.FromIndex(i);
-
-                if (placedDigits.HasAnyOptions(digit) || removedOptions)
-                {
-                    continue;
-                }
-
-                var positions = region.GetPositions(digit);
-
-                if (positions.IsSingle)
-                {
-                    var index = positions.ToIndex();
-                    var currentCell = region[index];
-
-                    cells[currentCell.Index] = currentCell.SetValue(digit);
-
-                    _queue.Enqueue(puzzle.Rows[currentCell.Row]);
-                    _queue.Enqueue(puzzle.Columns[currentCell.Column]);
-                    _queue.Enqueue(puzzle.Boxes[currentCell.Box]);
-
-                    removedOptions = true;
+                    return (true, name);
                 }
             }
 
-            return removedOptions;
+            return (false, null);
         }
 
-        private (bool, Puzzle) AttemptBruteForce(in Puzzle puzzle, int depth)
+        private bool AttemptBruteForce(int depth)
         {
             if (depth > _maxBruteForceDepth)
             {
-                return (false, puzzle);
+                return false;
             }
 
             var optionsArray = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
 
-            foreach (var region in puzzle.Regions)
+            foreach (var region in CurrentPuzzle.Regions)
             {
                 var placedDigits = region.GetPlacedDigits();
 
@@ -210,48 +148,53 @@ namespace Sudoku
                         continue;
                     }
 
-                    var (success, newPuzzle) = EvaluateOptions(puzzle, depth, optionsArray, region, value);
+                    var success = EvaluateOptions(depth, optionsArray, region, value);
 
                     if (success)
                     {
                         ArrayPool<int>.Shared.Return(optionsArray);
 
-                        return (true, newPuzzle);
+                        return true;
                     }
                 }
             }
 
             ArrayPool<int>.Shared.Return(optionsArray);
-            return (false, puzzle);
+            return false;
         }
 
-        private (bool, Puzzle) EvaluateOptions(Puzzle puzzle, int depth, int[] optionsArray, Region region, SudokuValues value)
+        private bool EvaluateOptions(int depth, int[] optionsArray, Region region, SudokuValues value)
         {
             var options = region.GetPositions(value);
             var count = options.CopyIndices(optionsArray);
 
             if (count != 2)
             {
-                return (false, puzzle);
+                return false;
             }
 
-            var possiblePuzzle = puzzle.UpdateCell(region[optionsArray[0]].SetValue(value));
+            var newCell = region[optionsArray[0]].SetValue(value);
 
-            var (result, resultPuzzle) = Solve(possiblePuzzle, depth + 1);
+            var possiblePuzzle = CurrentPuzzle.UpdateCell(newCell);
+
+            var otherSolver = new Solver(possiblePuzzle, _maxSteps, _maxBruteForceDepth);
+            var (result, resultPuzzle) = otherSolver.Solve(depth + 1);
 
             if (result == SolveResult.Success)
             {
-                return (true, resultPuzzle);
+                CurrentPuzzle = resultPuzzle;
+                return true;
             }
             else if (result == SolveResult.Invalid)
             {
                 // it must be the other option
-                var newPuzzle = puzzle.UpdateCell(region[optionsArray[1]].SetValue(value));
+                var newPuzzle = CurrentPuzzle.UpdateCell(region[optionsArray[1]].SetValue(value));
+                CurrentPuzzle = newPuzzle;
 
-                return (true, newPuzzle);
+                return true;
             }
 
-            return (false, puzzle);
+            return false;
         }
     }
 }

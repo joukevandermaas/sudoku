@@ -1,37 +1,42 @@
 ﻿
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Sudoku
 {
-    internal class HiddenTupleStrategy : ISolveStrategy
+    public class HiddenTupleStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(in Puzzle puzzle)
+        private readonly int _size;
+
+        public HiddenTupleStrategy(int size)
+        {
+            _size = size;
+        }
+
+        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
             var updatedCells = new List<Cell>();
-            var regions = puzzle.Regions;
 
-            foreach (var region in regions)
+            while (unprocessedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
-                {
-                    var (success, newPuzzle) = FindTuple(puzzle, updatedCells, region, placedDigits, tupleSize);
+                FindTuple(puzzle, updatedCells, region, placedDigits);
 
-                    if (success)
-                    {
-                        return (true, newPuzzle);
-                    }
+                if (updatedCells.Count > 0)
+                {
+                    return new ChangeSet(updatedCells);
                 }
             }
 
-            return (false, puzzle);
+            return ChangeSet.Empty;
         }
 
-        private static (bool, Puzzle) FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits, int tupleSize)
+        private void FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits)
         {
-            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
             for (int i = 0; i < combinations.Length; i++)
             {
@@ -45,7 +50,7 @@ namespace Sudoku
 
                 var positions = region.GetPositions(comb);
 
-                if (positions.GetOptionCount() != tupleSize)
+                if (positions.GetOptionCount() != _size)
                 {
                     // these digits are placeable in more than tupleSize spots, so not hidden tuple
                     continue;
@@ -71,15 +76,11 @@ namespace Sudoku
                 if (updatedCells.Count > 0)
                 {
 #if DEBUG
-                    Program.DebugText = $"Hidden {comb} tuple in {region}";
+                    Program.AddDebugText($"Hidden {comb} tuple in {region}");
 #endif
-
-                    var newPuzzle = puzzle.UpdateCells(updatedCells);
-                    return (true, newPuzzle);
+                    return;
                 }
             }
-
-            return (false, puzzle);
         }
     }
 }

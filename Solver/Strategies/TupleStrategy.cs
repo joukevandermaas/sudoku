@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Sudoku
 {
@@ -7,34 +8,37 @@ namespace Sudoku
     /// Finds pairs, triples and quadruples of digits, removes those from other cells in the region
     /// note that quintuples and higher always correspond to one of the above tuples in the other cells
     /// </summary>
-    internal class TupleStrategy : ISolveStrategy
+    public class TupleStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(in Puzzle puzzle)
+        private readonly int _size;
+
+        public TupleStrategy(int size)
+        {
+            _size = size;
+        }
+
+        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
             var updatedCells = new List<Cell>();
-            var regions = puzzle.Regions;
 
-            foreach (var region in regions)
+            while (unprocessedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                for (int tupleSize = 2; tupleSize <= 4; tupleSize++)
-                {
-                    var (success, newPuzzle) = FindTuple(puzzle, updatedCells, region, placedDigits, tupleSize);
+                FindTuple(puzzle, updatedCells, region, placedDigits);
 
-                    if (success)
-                    {
-                        return (true, newPuzzle);
-                    }
+                if (updatedCells.Count > 0)
+                {
+                    return new ChangeSet(updatedCells);
                 }
             }
 
-            return (false, puzzle);
+            return ChangeSet.Empty;
         }
 
-        private static (bool, Puzzle) FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits, int tupleSize)
+        private void FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits)
         {
-            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, tupleSize);
+            var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
             for (int j = 0; j < combinations.Length; j++)
             {
@@ -46,7 +50,7 @@ namespace Sudoku
                     continue;
                 }
 
-                var indices = ArrayPool<int>.Shared.Rent(tupleSize);
+                var indices = ArrayPool<int>.Shared.Rent(_size);
                 var count = comb.CopyIndices(indices);
                 var possibleValues = SudokuValues.None;
 
@@ -60,7 +64,7 @@ namespace Sudoku
 
                 var optionsCount = possibleValues.GetOptionCount();
 
-                if (optionsCount == tupleSize)
+                if (optionsCount == _size)
                 {
                     // we found a tuple!
 
@@ -89,15 +93,12 @@ namespace Sudoku
                     if (updatedCells.Count > 0)
                     {
 #if DEBUG
-                        Program.DebugText = $"{possibleValues} tuple in {region}.";
+                        Program.AddDebugText($"{possibleValues} tuple in {region}.");
 #endif
-
-                        return (true, puzzle.UpdateCells(updatedCells));
+                        return;
                     }
                 }
             }
-
-            return (false, puzzle);
         }
     }
 }

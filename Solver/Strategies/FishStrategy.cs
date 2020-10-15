@@ -1,39 +1,55 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Sudoku
 {
-    internal class SwordfishStrategy : ISolveStrategy
+    public class FishStrategy : ISolveStrategy
     {
-        public (bool, Puzzle) Apply(in Puzzle puzzle)
+        private readonly int _size;
+
+        public FishStrategy(int size)
+        {
+            _size = size;
+        }
+
+        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
             var potentialRegions = new List<(Region region, SudokuValues positions)>();
             var updatedCells = new List<Cell>();
 
-            for (var fishSize = 2; fishSize < 4; fishSize++)
+            var checkRows = unprocessedRegions.HasAnyRows;
+            var checkColumns = unprocessedRegions.HasAnyRows;
+
+            for (var digit = 1; digit <= Puzzle.LineLength; digit++)
             {
-                for (var digit = 1; digit <= Puzzle.LineLength; digit++)
+                if (checkRows)
                 {
-                    var (success, newPuzzle) = FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Row, digit, fishSize);
+                    FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Row, digit);
 
-                    if (success)
+                    if (updatedCells.Count > 0)
                     {
-                        return (true, newPuzzle);
+                        return new ChangeSet(updatedCells);
                     }
+                }
 
-                    (success, newPuzzle) = FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Column, digit, fishSize);
+                if (checkColumns)
+                {
+                    FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Column, digit);
 
-                    if (success)
+                    if (updatedCells.Count > 0)
                     {
-                        return (true, newPuzzle);
+                        return new ChangeSet(updatedCells);
                     }
                 }
             }
 
-            return (false, puzzle);
+            unprocessedRegions.Clear();
+
+            return ChangeSet.Empty;
         }
 
-        private (bool, Puzzle) FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, in Puzzle puzzle, RegionType type, int digit, int fishSize)
+        private void FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, in Puzzle puzzle, RegionType type, int digit)
         {
             potentialRegions.Clear();
 
@@ -45,33 +61,33 @@ namespace Sudoku
                 var positions = region.GetPositions(value);
                 var count = positions.GetOptionCount();
 
-                if (count > 1 && count <= fishSize)
+                if (count > 1 && count <= _size)
                 {
                     potentialRegions.Add((region, positions));
                 }
             }
 
             // cannot find a swordfish, because we don't have enough rows/columns
-            if (potentialRegions.Count < fishSize)
+            if (potentialRegions.Count < _size)
             {
-                return (false, puzzle);
+                return;
             }
 
-            var combinations = Helpers.GetCombinationIndices(potentialRegions.Count, fishSize);
+            var combinations = Helpers.GetCombinationIndices(potentialRegions.Count, _size);
             var combinedPositions = SudokuValues.None;
             var regions = new List<Region>();
             var foundFish = false;
 
             for (int i = 0; i < combinations.Length; i++)
             {
-                var combination = ArrayPool<int>.Shared.Rent(fishSize);
+                var combination = ArrayPool<int>.Shared.Rent(_size);
 
                 combinations[i].CopyIndices(combination);
 
                 combinedPositions = SudokuValues.None;
                 regions.Clear();
 
-                for (var index = 0; index < fishSize; index++)
+                for (var index = 0; index < _size; index++)
                 {
                     var regionInfo = potentialRegions[index];
                     combinedPositions = combinedPositions.AddOptions(regionInfo.positions);
@@ -80,7 +96,7 @@ namespace Sudoku
 
                 ArrayPool<int>.Shared.Return(combination);
 
-                if (combinedPositions.GetOptionCount() == fishSize)
+                if (combinedPositions.GetOptionCount() == _size)
                 {
                     foundFish = true;
                     break;
@@ -90,7 +106,7 @@ namespace Sudoku
             // no 3 rows/columns had options in exactly 3 spots
             if (!foundFish)
             {
-                return (false, puzzle);
+                return;
             }
 
             // we found a swordfish!
@@ -132,13 +148,9 @@ namespace Sudoku
             {
 #if DEBUG
                 Program.HighlightDigit = digit;
-                Program.DebugText = $"Fish of size {fishSize} in {string.Join(", ", regions)}.";
+                Program.AddDebugText($"Fish of size {_size} in {string.Join(", ", regions)}.");
 #endif
-
-                return (true, puzzle.UpdateCells(updatedCells));
             }
-
-            return (false, puzzle);
         }
     }
 }

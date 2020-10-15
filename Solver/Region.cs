@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Sudoku
 {
-    enum RegionType
+    public enum RegionType
     {
         None,
         Row,
@@ -12,7 +12,7 @@ namespace Sudoku
         Box
     }
 
-    internal readonly struct Region : IEnumerable<Cell>, IEquatable<Region>
+    public readonly struct Region : IEnumerable<Cell>, IEquatable<Region>
     {
         private readonly Cell[] _allCells;
 

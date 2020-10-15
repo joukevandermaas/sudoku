@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Sudoku
 {
-    internal readonly struct SudokuValues : IEquatable<SudokuValues>
+    public readonly struct SudokuValues : IEquatable<SudokuValues>
     {
         public const int Mask = 0x1FF; // only first 9 bits, we don't care about the rest
 

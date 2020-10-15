@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Sudoku
 {
-    static class Printer
+    public static class Printer
     {
         public static string ForConsole(Puzzle puzzle, bool printIndices = false)
         {

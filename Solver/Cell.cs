@@ -2,7 +2,7 @@
 
 namespace Sudoku
 {
-    internal readonly struct Cell : IEquatable<Cell>
+    public readonly struct Cell : IEquatable<Cell>
     {
         public SudokuValues Value { get; }
 

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Sudoku
 {
-    internal readonly struct Puzzle : IEquatable<Puzzle>
+    public readonly struct Puzzle : IEquatable<Puzzle>
     {
         public const int LineLength = 9;
         public const int BoxLength = 3;
