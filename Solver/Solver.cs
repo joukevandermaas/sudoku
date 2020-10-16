@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Sudoku
 {
@@ -13,35 +14,39 @@ namespace Sudoku
     public class Solver
     {
         private readonly int _maxSteps;
-        private readonly int _maxBruteForceDepth;
-        private readonly int _currentBruteForceDepth;
 
         public Puzzle CurrentPuzzle { get; private set; }
 
+        public int MaxBruteForceDepth { get; }
+
         private readonly List<RegionQueue> _regionQueues;
-        private readonly List<(ISolveStrategy strat, string name)> _strategies = new List<(ISolveStrategy, string)>
-        {
-            (new NakedSingleStrategy(), "digits"),
-            (new HiddenSingleStrategy(), "hidden single"),
-            (new BoxLayoutStrategy(), "box layout"),
-            (new HiddenTupleStrategy(2), "hidden pair"),
-            (new TupleStrategy(2), "pair"),
-            (new FishStrategy(2), "xwing"),
-            (new HiddenTupleStrategy(3), "hidden tripple"),
-            (new TupleStrategy(3), "tripple"),
-            (new HiddenTupleStrategy(4), "hidden quadruple"),
-            (new TupleStrategy(4), "quadruple"),
-            (new FishStrategy(3), "swordfish"),
-        };
+        private readonly List<(ISolveStrategy strat, string name)> _strategies;
 
         public Solver(Puzzle puzzle, int maxSteps, int maxBruteForceDepth)
         {
             CurrentPuzzle = puzzle;
             _maxSteps = maxSteps;
-            _maxBruteForceDepth = maxBruteForceDepth;
-            _currentBruteForceDepth = 1;
+            MaxBruteForceDepth = maxBruteForceDepth;
 
-            MaybeAddBruteForceStrategy();
+            _strategies = new List<(ISolveStrategy, string)>
+            {
+                (new NakedSingleStrategy(), "digits"),
+                (new HiddenSingleStrategy(), "hidden single"),
+                (new BoxLayoutStrategy(), "box layout"),
+                (new HiddenTupleStrategy(2), "hidden pair"),
+                (new TupleStrategy(2), "pair"),
+                (new HiddenTupleStrategy(3), "hidden tripple"),
+                (new TupleStrategy(3), "tripple"),
+                (new FishStrategy(2), "xwing"),
+                (new HiddenTupleStrategy(4), "hidden quadruple"),
+                (new TupleStrategy(4), "quadruple"),
+                (new FishStrategy(3), "swordfish"),
+            };
+
+            if (MaxBruteForceDepth > 0)
+            {
+                _strategies.Add((new BruteForceStrategy(this), "brute force"));
+            }
 
             _regionQueues = new List<RegionQueue>(_strategies.Count);
 
@@ -55,10 +60,9 @@ namespace Sudoku
         {
             CurrentPuzzle = changeSet.ApplyTo(other.CurrentPuzzle);
             _maxSteps = other._maxSteps;
-            _maxBruteForceDepth = other._maxBruteForceDepth;
-            _currentBruteForceDepth = other._currentBruteForceDepth + 1;
+            MaxBruteForceDepth = other.MaxBruteForceDepth;
 
-            MaybeAddBruteForceStrategy();
+            _strategies = other._strategies;
 
             _regionQueues = new List<RegionQueue>(_strategies.Count);
 
@@ -70,16 +74,7 @@ namespace Sudoku
             }
         }
 
-        private void MaybeAddBruteForceStrategy()
-        {
-            if (_maxBruteForceDepth > 0 && _currentBruteForceDepth < _maxBruteForceDepth)
-            {
-                _strategies.Add((new BruteForceStrategy(this), "brute force"));
-            }
-        }
-
-
-        internal (SolveResult, Puzzle) Solve()
+        public (SolveResult, Puzzle) Solve()
         {
             var actualSteps = 0;
 
@@ -120,7 +115,7 @@ namespace Sudoku
                 var (strat, name) = _strategies[i];
                 var workQueue = _regionQueues[i];
 #if DEBUG
-                    Program.AddDebugText($"{name} is considering regions: {workQueue}");
+                Program.AddDebugText($"{name} is considering regions: {workQueue}", "small");
 #endif
 
                 var changeSet = strat.Apply(CurrentPuzzle, workQueue);
@@ -128,7 +123,7 @@ namespace Sudoku
                 if (changeSet != ChangeSet.Empty)
                 {
 #if DEBUG
-                    Program.AddDebugText($"<br>{name} changed regions: {changeSet}");
+                    Program.AddDebugText($"<br>{name} changed regions: {changeSet}", "small");
 #endif
 
                     var newPuzzle = changeSet.ApplyTo(CurrentPuzzle);

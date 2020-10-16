@@ -6,7 +6,7 @@ namespace Sudoku
     {
         public SudokuValues Value { get; }
 
-        public int Index { get; }
+        public byte Index { get; }
 
         public int Row => Index / Puzzle.LineLength;
         public int Column => Index % Puzzle.LineLength;
@@ -33,7 +33,7 @@ namespace Sudoku
 
         public bool HasOptions(SudokuValues options) => !IsResolved && Value.HasAnyOptions(options);
 
-        public Cell(SudokuValues value, int index)
+        public Cell(SudokuValues value, byte index)
         {
             Value = value;
             Index = index;

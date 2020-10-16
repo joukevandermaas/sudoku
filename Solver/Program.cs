@@ -28,13 +28,13 @@ namespace Sudoku
         const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string bruteforce = "300060005020000040007000200000607000900080006000901000002000700040000010600050009";
 
-        const string currentPuzzle = sunset;
+        const string currentPuzzle = ctc4;
 
 #if DEBUG
         public static int HighlightDigit = 0;
         private static string _debugText = string.Empty;
 
-        public static void AddDebugText(string text) => _debugText += "<br>" + text;
+        public static void AddDebugText(string text, string classList = "") => _debugText += $"<p class='{classList}'>" + text + "<p>\r\n";
 #endif
 
         private const bool _profiling = false;
@@ -60,29 +60,32 @@ namespace Sudoku
                 // warmup run
                 SolveMany(puzzles, printResults: false, parallel: false);
 
-                Console.WriteLine("No parallelism:");
 
-                const int count = _profiling ? 1 : 10;
-                var times = new List<TimeSpan>(count);
-
-                for (int i = 0; i < count; i++)
-                {
-                    var time = SolveMany(puzzles, printResults: true, parallel: false);
-                    times.Add(time);
-                }
-
-                var totalMillis = times.Aggregate(TimeSpan.Zero, (total, current) => total + current).TotalMilliseconds;
-                Console.WriteLine("Average time: {0}", totalMillis / count);
-
-                //Console.WriteLine("With parallelism:");
-                //for (int i = 0; i < 5; i++)
-                //{
-                //    SolveMany(puzzles, printResults: true, parallel: true);
-                //}
+                Benchmark("No parallelism", puzzles, false);
+                // Benchmark("With parallelism", puzzles, true);
             }
         }
 
-        private static TimeSpan SolveMany(List<Puzzle> puzzles, bool printResults, bool parallel)
+        private static void Benchmark(string title, List<Puzzle> puzzles, bool parallel)
+        {
+            Console.WriteLine("{0}:", title);
+            const int count = _profiling ? 1 : 10;
+            var totalTimes = new List<TimeSpan>(count);
+            var wallTimes = new List<TimeSpan>(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                var (total, wall) = SolveMany(puzzles, printResults: true, parallel: parallel);
+                totalTimes.Add(total);
+                wallTimes.Add(wall);
+            }
+
+            var totalMillis = totalTimes.Aggregate(TimeSpan.Zero, (total, current) => total + current).TotalMilliseconds;
+            var wallMillis = wallTimes.Aggregate(TimeSpan.Zero, (total, current) => total + current).TotalMilliseconds;
+            Console.WriteLine("Average time: {0:000.00}ms (wall time {1:000.00}ms)", totalMillis / count, wallMillis / count);
+        }
+
+        private static (TimeSpan total, TimeSpan wall) SolveMany(List<Puzzle> puzzles, bool printResults, bool parallel)
         {
             var results = new (TimeSpan time, bool success)[puzzles.Count];
 
@@ -119,7 +122,7 @@ namespace Sudoku
                     watch.Elapsed.TotalMilliseconds);
             }
 
-            return totalTime;
+            return (totalTime, watch.Elapsed);
         }
 
         static (TimeSpan, bool, Puzzle) SolveFast(in Puzzle puzzle)
@@ -158,9 +161,8 @@ namespace Sudoku
                     builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat);
                     if (!string.IsNullOrEmpty(_debugText))
                     {
-                        builder.AppendFormat("<p>{0}</p>", _debugText);
+                        builder.AppendLine(_debugText);
                     }
-                    builder.AppendLine();
 
                     builder.AppendLine("<div class='step'>");
                     builder.AppendLine(Printer.ForBrowser(puzzle, puzzle, HighlightDigit));
@@ -182,6 +184,10 @@ namespace Sudoku
 
             var status = puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid";
             builder.AppendFormat("<h3>{0}</h3>", status);
+            if (!string.IsNullOrEmpty(_debugText))
+            {
+                builder.AppendLine(_debugText);
+            }
 
             builder.AppendLine("<div class='step'>");
             builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
@@ -272,6 +278,11 @@ body {
 
 .number.many {
   font-size: 6pt;
+}
+
+.small {
+  font-size: 8pt;
+  font-style: italic;
 }
 
 </style>

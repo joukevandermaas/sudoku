@@ -23,7 +23,7 @@ namespace Sudoku
 
             for (var i = 0; i < cells.Length; i++)
             {
-                var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), i);
+                var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), (byte)i);
                 cells[i] = cell;
             }
 

@@ -21,6 +21,7 @@ namespace Sudoku
         // when a bit is set that means the queue already
         // contains that region.
         private int _currentValues;
+        private int _lastDequeueIndex = 0;
 
         private RegionQueue(int values)
         {
@@ -30,12 +31,14 @@ namespace Sudoku
         public void EnqueueAll(RegionQueue other)
         {
             _currentValues |= other._currentValues;
+            _lastDequeueIndex = 0;
         }
 
         public void Enqueue(RegionType type, int index)
         {
             var mask = GetMask(type, index);
             _currentValues |= mask;
+            _lastDequeueIndex = 0;
         }
 
         public void IgnoreAllOfType(RegionType type)
@@ -52,6 +55,7 @@ namespace Sudoku
                     _currentValues &= ~_boxMask;
                     break;
             }
+            _lastDequeueIndex = 0;
         }
 
         public bool TryDequeueOfType(RegionType type, out int index)
@@ -79,11 +83,14 @@ namespace Sudoku
         {
             if (_currentValues != 0)
             {
-                for (int i = 0; i < (3 * Puzzle.LineLength); i++)
+                for (int i = _lastDequeueIndex; i < (3 * Puzzle.LineLength); i++)
                 {
+                    _lastDequeueIndex = i;
+
                     var mask = 1 << i;
                     if ((_currentValues & mask) != 0)
                     {
+
                         type = GetRegionType(i);
                         index = GetIndex(i);
 
@@ -148,6 +155,7 @@ namespace Sudoku
         public void Clear()
         {
             _currentValues = 0;
+            _lastDequeueIndex = 0;
         }
         public void Clear(RegionType regionType)
         {
@@ -158,6 +166,7 @@ namespace Sudoku
                 RegionType.Box => _boxMask,
                 _ => 0
             });
+            _lastDequeueIndex = 0;
         }
 
         public bool HasAnyRows => (_currentValues & _rowMask) != 0;
