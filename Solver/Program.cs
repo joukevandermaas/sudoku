@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+#if DEBUG
+using System.Text;
+#endif
 
 namespace Sudoku
 {
@@ -26,7 +28,7 @@ namespace Sudoku
         const string slow = "340600000007000000020080570000005000070010020000400000036020010000000900000007082";
         const string bruteforce = "300060005020000040007000200000607000900080006000901000002000700040000010600050009";
 
-        const string currentPuzzle = ctc3;
+        const string currentPuzzle = sunset;
 
 #if DEBUG
         public static int HighlightDigit = 0;

@@ -1,7 +1,4 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Sudoku
@@ -152,10 +149,36 @@ namespace Sudoku
         {
             _currentValues = 0;
         }
+        public void Clear(RegionType regionType)
+        {
+            _currentValues &= ~(regionType switch
+            {
+                RegionType.Row => _rowMask,
+                RegionType.Column => _colMask,
+                RegionType.Box => _boxMask,
+                _ => 0
+            });
+        }
 
         public bool HasAnyRows => (_currentValues & _rowMask) != 0;
         public bool HasAnyColumns => (_currentValues & _colMask) != 0;
         public bool HasAnyBoxes => (_currentValues & _boxMask) != 0;
+
+        public RegionQueue Clone()
+        {
+            return new RegionQueue(_currentValues);
+        }
+
+        public SudokuValues Rows => new SudokuValues(_currentValues & _rowMask);
+        public SudokuValues Columns => new SudokuValues((_currentValues & _colMask) >> Puzzle.LineLength);
+        public SudokuValues Boxes => new SudokuValues((_currentValues & _boxMask) >> (Puzzle.LineLength * 2));
+        public SudokuValues Regions(RegionType type) => type switch
+        {
+            RegionType.Row => Rows,
+            RegionType.Column => Columns,
+            RegionType.Box => Boxes,
+            _ => SudokuValues.None,
+        };
 
         public override string ToString()
         {

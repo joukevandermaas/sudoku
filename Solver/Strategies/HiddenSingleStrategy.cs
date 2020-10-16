@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace Sudoku
 {
     public class HiddenSingleStrategy : ISolveStrategy
     {
+        private List<Cell> _updates = new List<Cell>(Puzzle.LineLength * Puzzle.LineLength);
+        private readonly HashSet<int> _changedIndices = new HashSet<int>(Puzzle.LineLength * Puzzle.LineLength);
+
         public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
+            _updates.Clear();
+            _changedIndices.Clear();
+
             var cells = puzzle.Cells.ToArray();
-            var changedIndices = new HashSet<int>();
 
             var anySuccess = false;
 
@@ -19,23 +23,22 @@ namespace Sudoku
             // they can be scanned again.
             while (unprocessedRegions.TryDequeue(cells, out var region))
             {
-                anySuccess = ScanRegion(unprocessedRegions, cells, region, changedIndices) || anySuccess;
+                anySuccess = ScanRegion(unprocessedRegions, cells, region) || anySuccess;
             }
 
             if (anySuccess)
             {
-                var changes = new List<Cell>(changedIndices.Count);
-                foreach (var index in changedIndices)
+                foreach (var index in _changedIndices)
                 {
-                    changes.Add(cells[index]);
+                    _updates.Add(cells[index]);
                 }
-                return new ChangeSet(changes);
+                return new ChangeSet(_updates);
             }
 
             return ChangeSet.Empty;
         }
 
-        private bool ScanRegion(RegionQueue regions, Cell[] cells, Region region, HashSet<int> changedIndices)
+        private bool ScanRegion(RegionQueue regions, Cell[] cells, Region region)
         {
             var placedDigits = region.GetPlacedDigits();
             var removedOptions = false;
@@ -57,7 +60,7 @@ namespace Sudoku
                     var currentCell = region[index];
 
                     cells[currentCell.Index] = currentCell.SetValue(digit);
-                    changedIndices.Add(currentCell.Index);
+                    _changedIndices.Add(currentCell.Index);
 
                     regions.Enqueue(RegionType.Row, currentCell.Row);
                     regions.Enqueue(RegionType.Column, currentCell.Column);

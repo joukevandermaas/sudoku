@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace Sudoku
 {
@@ -9,9 +8,11 @@ namespace Sudoku
     /// </summary>
     public class BoxLayoutStrategy : ISolveStrategy
     {
+        private List<Cell> _updates = new List<Cell>(Puzzle.LineLength);
+
         public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
-            var updates = new List<Cell>(Puzzle.LineLength);
+            _updates.Clear();
 
             while (unprocessedRegions.TryDequeueOfType(RegionType.Box, out int boxIndex))
             {
@@ -37,30 +38,30 @@ namespace Sudoku
                     if (rows.IsSingle)
                     {
                         var region = puzzle.Rows[rows.ToIndex()];
-                        RemoveFromOtherBoxesInRegion(updates, region, value, boxIndex);
+                        RemoveFromOtherBoxesInRegion(region, value, boxIndex);
 
-                        if (updates.Count > 0)
+                        if (_updates.Count > 0)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
                             Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
 
-                            return new ChangeSet(updates);
+                            return new ChangeSet(_updates);
                         }
                     }
                     if (cols.IsSingle)
                     {
                         var region = puzzle.Columns[cols.ToIndex()];
-                        RemoveFromOtherBoxesInRegion(updates, region, value, boxIndex);
+                        RemoveFromOtherBoxesInRegion(region, value, boxIndex);
 
-                        if (updates.Count > 0)
+                        if (_updates.Count > 0)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
                             Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
-                            return new ChangeSet(updates);
+                            return new ChangeSet(_updates);
                         }
 
                     }
@@ -70,7 +71,7 @@ namespace Sudoku
             return ChangeSet.Empty;
         }
 
-        private void RemoveFromOtherBoxesInRegion(List<Cell> updates, Region region, SudokuValues value, int boxIndex)
+        private void RemoveFromOtherBoxesInRegion(Region region, SudokuValues value, int boxIndex)
         {
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
@@ -82,7 +83,7 @@ namespace Sudoku
 
                 if (cell.HasOptions(value))
                 {
-                    updates.Add(cell.RemoveOptions(value));
+                    _updates.Add(cell.RemoveOptions(value));
                 }
             }
         }

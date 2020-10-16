@@ -13,9 +13,9 @@ namespace Sudoku
         private readonly Cell[] _cells;
         private readonly Region[] _regions;
 
-        public IReadOnlyList<Region> Rows => new ArraySegment<Region>(_regions, 0, LineLength);
-        public IReadOnlyList<Region> Columns => new ArraySegment<Region>(_regions, LineLength, LineLength);
-        public IReadOnlyList<Region> Boxes => new ArraySegment<Region>(_regions, LineLength * 2, LineLength);
+        public IReadOnlyList<Region> Rows { get; }
+        public IReadOnlyList<Region> Columns { get; }
+        public IReadOnlyList<Region> Boxes { get; }
 
         public static Puzzle FromString(string puzzle)
         {
@@ -42,6 +42,10 @@ namespace Sudoku
                 _regions[i + LineLength] = new Region(_cells, RegionType.Column, i);
                 _regions[i + (LineLength * 2)] = new Region(_cells, RegionType.Box, i);
             }
+
+            Rows = new ArraySegment<Region>(_regions, 0, LineLength);
+            Columns = new ArraySegment<Region>(_regions, LineLength, LineLength);
+            Boxes = new ArraySegment<Region>(_regions, LineLength * 2, LineLength);
         }
 
         public bool IsSolved

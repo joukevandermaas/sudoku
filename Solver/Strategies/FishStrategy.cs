@@ -1,45 +1,47 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace Sudoku
 {
     public class FishStrategy : ISolveStrategy
     {
         private readonly int _size;
+        private List<Cell> _updatedCells; 
 
         public FishStrategy(int size)
         {
             _size = size;
+            _updatedCells = new List<Cell>(Puzzle.LineLength * _size);
         }
 
         public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
-            var potentialRegions = new List<(Region region, SudokuValues positions)>();
-            var updatedCells = new List<Cell>();
+            _updatedCells.Clear();
 
-            var checkRows = unprocessedRegions.HasAnyRows;
-            var checkColumns = unprocessedRegions.HasAnyRows;
+            var potentialRegions = new List<(Region region, SudokuValues positions)>();
+
+            var changedRows = unprocessedRegions.Rows;
+            var changedCols = unprocessedRegions.Columns;
 
             for (var digit = 1; digit <= Puzzle.LineLength; digit++)
             {
-                if (checkRows)
+                if (changedRows != SudokuValues.None)
                 {
-                    FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Row, digit);
+                    FindSwordfish(potentialRegions, puzzle, RegionType.Row, digit);
 
-                    if (updatedCells.Count > 0)
+                    if (_updatedCells.Count > 0)
                     {
-                        return new ChangeSet(updatedCells);
+                        return new ChangeSet(_updatedCells);
                     }
                 }
 
-                if (checkColumns)
+                if (changedCols != SudokuValues.None)
                 {
-                    FindSwordfish(potentialRegions, updatedCells, puzzle, RegionType.Column, digit);
+                    FindSwordfish(potentialRegions, puzzle, RegionType.Column, digit);
 
-                    if (updatedCells.Count > 0)
+                    if (_updatedCells.Count > 0)
                     {
-                        return new ChangeSet(updatedCells);
+                        return new ChangeSet(_updatedCells);
                     }
                 }
             }
@@ -49,7 +51,7 @@ namespace Sudoku
             return ChangeSet.Empty;
         }
 
-        private void FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, List<Cell> updatedCells, in Puzzle puzzle, RegionType type, int digit)
+        private void FindSwordfish(List<(Region region, SudokuValues positions)> potentialRegions, in Puzzle puzzle, RegionType type, int digit)
         {
             potentialRegions.Clear();
 
@@ -140,11 +142,11 @@ namespace Sudoku
                         continue;
                     }
 
-                    updatedCells.Add(cell.RemoveOptions(value));
+                    _updatedCells.Add(cell.RemoveOptions(value));
                 }
             }
 
-            if (updatedCells.Count > 0)
+            if (_updatedCells.Count > 0)
             {
 #if DEBUG
                 Program.HighlightDigit = digit;

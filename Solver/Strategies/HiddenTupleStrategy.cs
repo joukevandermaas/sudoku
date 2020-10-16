@@ -1,13 +1,12 @@
 ﻿
 using System.Buffers;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace Sudoku
 {
     public class HiddenTupleStrategy : ISolveStrategy
     {
+        private List<Cell> _updatedCells = new List<Cell>(Puzzle.LineLength);
         private readonly int _size;
 
         public HiddenTupleStrategy(int size)
@@ -17,24 +16,24 @@ namespace Sudoku
 
         public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
         {
-            var updatedCells = new List<Cell>();
+            _updatedCells.Clear();
 
             while (unprocessedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                FindTuple(puzzle, updatedCells, region, placedDigits);
+                FindTuple(puzzle, region, placedDigits);
 
-                if (updatedCells.Count > 0)
+                if (_updatedCells.Count > 0)
                 {
-                    return new ChangeSet(updatedCells);
+                    return new ChangeSet(_updatedCells);
                 }
             }
 
             return ChangeSet.Empty;
         }
 
-        private void FindTuple(in Puzzle puzzle, List<Cell> updatedCells, Region region, SudokuValues placedDigits)
+        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits)
         {
             var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
@@ -67,13 +66,13 @@ namespace Sudoku
 
                     if (cell.HasOptions(opposite))
                     {
-                        updatedCells.Add(cell.RemoveOptions(opposite));
+                        _updatedCells.Add(cell.RemoveOptions(opposite));
                     }
                 }
 
                 ArrayPool<int>.Shared.Return(options);
 
-                if (updatedCells.Count > 0)
+                if (_updatedCells.Count > 0)
                 {
 #if DEBUG
                     Program.AddDebugText($"Hidden {comb} tuple in {region}");

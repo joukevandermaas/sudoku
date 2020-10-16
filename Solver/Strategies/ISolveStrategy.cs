@@ -1,6 +1,4 @@
-﻿using System.Collections.ObjectModel;
-
-namespace Sudoku
+﻿namespace Sudoku
 {
     public interface ISolveStrategy
     {
