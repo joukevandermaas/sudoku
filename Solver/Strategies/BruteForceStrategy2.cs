@@ -1,13 +1,15 @@
 ﻿using System.Buffers;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Sudoku
 {
-    public class BruteForceStrategy : ISolveStrategy
+    public class BruteForceStrategy2 : ISolveStrategy
     {
         private Solver _solver;
         private int _currentBruteForceDepth = 0;
 
-        public BruteForceStrategy(Solver solver)
+        public BruteForceStrategy2(Solver solver)
         {
             _solver = solver;
         }
@@ -19,51 +21,37 @@ namespace Sudoku
                 return new EmptyChangeSet();
             }
 
-            var optionsArray = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
-
+            var options = ArrayPool<SudokuValues>.Shared.Rent(Puzzle.LineLength);
             while (changedRegions.TryDequeue(puzzle, out var region))
             {
-                var placedDigits = region.GetPlacedDigits();
-
-                for (int i = 1; i < Puzzle.LineLength; i++)
+                for (int i = 0; i < Puzzle.LineLength; i++)
                 {
-                    var value = SudokuValues.FromHumanValue(i);
-
-                    if (placedDigits.HasAnyOptions(value) || !changedDigits.HasAnyOptions(value))
+                    var cell = region[i];
+                    var count = cell.CopyValues(options);
+                    if (count != 2)
                     {
                         continue;
                     }
 
-                    var changeSet = EvaluateOptions(optionsArray, region, value);
+                    var changeSet = EvaluateOptions(options, region, i);
 
                     if (!changeSet.IsEmpty)
                     {
-                        ArrayPool<int>.Shared.Return(optionsArray);
-
                         return changeSet;
                     }
                 }
             }
 
-            ArrayPool<int>.Shared.Return(optionsArray);
             return new EmptyChangeSet();
         }
 
-        private IChangeSet EvaluateOptions(int[] optionsArray, Region region, SudokuValues value)
+        private IChangeSet EvaluateOptions(SudokuValues[] options, Region region, int index)
         {
-            var options = region.GetPositions(value);
-            var count = options.CopyIndices(optionsArray);
-
-            if (count != 2)
-            {
-                return new EmptyChangeSet();
-            }
-
-            var newCell = region.UpdateCell(optionsArray[0], value.Invert());
+            var newCell = region.UpdateCell(index, options[0]);
 
 #if DEBUG
-            var coord = region.GetCoordinate(optionsArray[0]);
-            Program.AddDebugText($"Attempting {value} in {coord}");
+            var coord = region.GetCoordinate(index);
+            Program.AddDebugText($"Attempting {options[1]} in {coord}");
 #endif
 
             var changeSet = new SingleCellChangeSet(newCell);
@@ -80,6 +68,7 @@ namespace Sudoku
 
 #if DEBUG
             Program.AddDebugText($"Result: {result}");
+            Program.HighlightDigit = 0;
 #endif
 
             if (result == SolveResult.Success)
@@ -91,7 +80,7 @@ namespace Sudoku
             else if (result == SolveResult.Invalid)
             {
                 // it must be the other option
-                newCell = region.UpdateCell(optionsArray[1], value.Invert());
+                newCell = region.UpdateCell(index, options[1]);
                 return new SingleCellChangeSet(newCell);
             }
 

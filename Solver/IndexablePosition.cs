@@ -64,5 +64,8 @@ namespace Sudoku
 
         public override int GetHashCode() => _values.GetHashCode();
 
+        public static bool operator ==(IndexablePosition left, IndexablePosition right) => left.Equals(right);
+        public static bool operator !=(IndexablePosition left, IndexablePosition right) => !left.Equals(right);
+
     }
 }

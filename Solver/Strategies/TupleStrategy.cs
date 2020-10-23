@@ -1,5 +1,5 @@
 ﻿using System.Buffers;
-using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace Sudoku
 {
@@ -9,7 +9,7 @@ namespace Sudoku
     /// </summary>
     public class TupleStrategy : ISolveStrategy
     {
-        private List<Cell> _updatedCells = new List<Cell>(Puzzle.LineLength);
+        private BasicChangeSet _updatedCells = new BasicChangeSet();
         private readonly int _size;
 
         public TupleStrategy(int size)
@@ -17,26 +17,21 @@ namespace Sudoku
             _size = size;
         }
 
-        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
+        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
         {
             _updatedCells.Clear();
 
-            while (unprocessedRegions.TryDequeue(puzzle, out var region))
+            while (changedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                FindTuple(puzzle, region, placedDigits);
-
-                if (_updatedCells.Count > 0)
-                {
-                    return new ChangeSet(_updatedCells);
-                }
+                FindTuple(puzzle, region, placedDigits, changedDigits);
             }
 
-            return ChangeSet.Empty;
+            return _updatedCells;
         }
 
-        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits)
+        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits, SudokuValues changedDigits)
         {
             var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
@@ -44,7 +39,7 @@ namespace Sudoku
             {
                 var comb = combinations[j];
 
-                if (placedDigits.HasAnyOptions(comb))
+                if (placedDigits.HasAnyOptions(comb) || !changedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -57,7 +52,7 @@ namespace Sudoku
                 for (int i = 0; i < count; i++)
                 {
                     var cell = region[indices[i]];
-                    possibleValues = possibleValues.AddOptions(cell.Value);
+                    possibleValues = possibleValues.AddOptions(cell);
                 }
 
                 ArrayPool<int>.Shared.Return(indices);
@@ -72,12 +67,12 @@ namespace Sudoku
                     {
                         var otherCell = region[i];
 
-                        if (otherCell.IsResolved)
+                        if (otherCell.IsSingle)
                         {
                             continue;
                         }
 
-                        if (!otherCell.Value.HasAnyOptions(possibleValues))
+                        if (!otherCell.HasAnyOptions(possibleValues))
                         {
                             continue;
                         }
@@ -87,16 +82,16 @@ namespace Sudoku
                             continue;
                         }
 
-                        _updatedCells.Add(otherCell.RemoveOptions(possibleValues));
+                        var newCell = region.UpdateCell(i, possibleValues);
+                        _updatedCells.Add(newCell);
                     }
 
-                    if (_updatedCells.Count > 0)
-                    {
 #if DEBUG
+                    if (!_updatedCells.IsEmpty)
+                    {
                         Program.AddDebugText($"{possibleValues} tuple in {region}.");
-#endif
-                        return;
                     }
+#endif
                 }
             }
         }

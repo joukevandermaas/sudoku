@@ -6,7 +6,7 @@ namespace Sudoku
 {
     public class HiddenTupleStrategy : ISolveStrategy
     {
-        private List<Cell> _updatedCells = new List<Cell>(Puzzle.LineLength);
+        private BasicChangeSet _updatedCells = new BasicChangeSet();
         private readonly int _size;
 
         public HiddenTupleStrategy(int size)
@@ -14,26 +14,21 @@ namespace Sudoku
             _size = size;
         }
 
-        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
+        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
         {
             _updatedCells.Clear();
 
-            while (unprocessedRegions.TryDequeue(puzzle, out var region))
+            while (changedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                FindTuple(puzzle, region, placedDigits);
-
-                if (_updatedCells.Count > 0)
-                {
-                    return new ChangeSet(_updatedCells);
-                }
+                FindTuple(puzzle, region, placedDigits, changedDigits);
             }
 
-            return ChangeSet.Empty;
+            return _updatedCells;
         }
 
-        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits)
+        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits, SudokuValues changedDigits)
         {
             var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
@@ -41,7 +36,7 @@ namespace Sudoku
             {
                 var comb = combinations[i];
 
-                if (placedDigits.HasAnyOptions(comb))
+                if (placedDigits.HasAnyOptions(comb) || !changedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -58,21 +53,22 @@ namespace Sudoku
                 // we found a hidden tuple!
                 var options = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
                 var count = positions.CopyIndices(options);
-                var opposite = SudokuValues.Invert(comb);
+                var opposite = comb.Invert();
 
                 for (var index = 0; index < count; index++)
                 {
                     var cell = region[options[index]];
 
-                    if (cell.HasOptions(opposite))
+                    if (!cell.IsSingle && cell.HasAnyOptions(opposite))
                     {
-                        _updatedCells.Add(cell.RemoveOptions(opposite));
+                        var update = region.UpdateCell(options[index], opposite);
+                        _updatedCells.Add(update);
                     }
                 }
 
                 ArrayPool<int>.Shared.Return(options);
 
-                if (_updatedCells.Count > 0)
+                if (!_updatedCells.IsEmpty)
                 {
 #if DEBUG
                     Program.AddDebugText($"Hidden {comb} tuple in {region}");

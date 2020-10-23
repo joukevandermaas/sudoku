@@ -10,8 +10,6 @@ namespace Sudoku
         public static SudokuValues All { get; } = new SudokuValues(~0);
         public static SudokuValues None { get; } = new SudokuValues(0);
 
-        public static SudokuValues Invert(SudokuValues values) => new SudokuValues(~values.Values);
-
         public static SudokuValues FromHumanValue(int value) => new SudokuValues(1 << (value - 1));
         public static SudokuValues FromIndex(int value) => new SudokuValues(1 << value);
         public static SudokuValues FromCharacter(char value)
@@ -33,6 +31,10 @@ namespace Sudoku
         public int Values { get; }
 
         public bool IsSingle => (Values & (Values - 1)) == 0 && Values != 0;
+
+        public SudokuValues Invert() => new SudokuValues(~Values);
+        public SudokuValues Intersect(SudokuValues other) => new SudokuValues(Values & other.Values);
+        public SudokuValues Union(SudokuValues other) => new SudokuValues(Values | other.Values);
 
         public SudokuValues RemoveOptions(SudokuValues options) => new SudokuValues(Values & (~options.Values));
         public SudokuValues AddOptions(SudokuValues options) => new SudokuValues(Values | options.Values);

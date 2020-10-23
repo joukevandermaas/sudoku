@@ -1,72 +1,50 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace Sudoku
+﻿namespace Sudoku
 {
     public class NakedSingleStrategy : ISolveStrategy
     {
-        private List<Cell> _updates = new List<Cell>(Puzzle.LineLength * Puzzle.LineLength);
-        private readonly HashSet<int> _changedIndices = new HashSet<int>(Puzzle.LineLength * Puzzle.LineLength);
-
-        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
+        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
         {
-            _updates.Clear();
-            _changedIndices.Clear();
-
-            var cells = puzzle.Cells.ToArray();
-
-            var anySuccess = false;
+            var mutablePuzzle = puzzle.AsMutable();
+            var digitsToCheck = changedDigits;
 
             // keep scanning regions for naked singles, removing
             // options when digits are placed. when a digit is placed,
             // its box, row and column are added back to 'regions' so
             // they can be scanned again.
-            while (unprocessedRegions.TryDequeue(cells, out var region))
+            while (changedRegions.TryDequeue(mutablePuzzle.Puzzle, out var region))
             {
-                anySuccess = ScanRegion(unprocessedRegions, cells, region) || anySuccess;
+                ScanRegion(changedRegions, mutablePuzzle, region);
+
+                digitsToCheck = mutablePuzzle.AddModifiedDigits(digitsToCheck);
             }
 
-            if (anySuccess)
-            {
-                foreach (var index in _changedIndices)
-                {
-                    _updates.Add(cells[index]);
-                }
-                return new ChangeSet(_updates);
-            }
-
-            return ChangeSet.Empty;
+            return mutablePuzzle;
         }
 
-        private bool ScanRegion(RegionQueue regions, Cell[] cells, Region region)
+        private void ScanRegion(RegionQueue regions, MutablePuzzle puzzle, Region region)
         {
             var placedDigits = region.GetPlacedDigits();
-            var removedOptions = false;
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
                 var cell = region[i];
+                var coords = region.GetCoordinate(i);
 
-                if (cell.HasOptions(placedDigits))
+                if (!cell.IsSingle && cell.HasAnyOptions(placedDigits))
                 {
-                    var newCell = cell.RemoveOptions(placedDigits);
-                    cells[cell.Index] = newCell;
-                    _changedIndices.Add(cell.Index);
+                    puzzle.RemoveOptions(coords, placedDigits);
 
-                    if (newCell.IsResolved)
+                    var newCell = cell.RemoveOptions(placedDigits);
+                    if (newCell.IsSingle)
                     {
                         // since we have placed a digit we must
                         // scan these regions again
-                        regions.Enqueue(RegionType.Row, newCell.Row);
-                        regions.Enqueue(RegionType.Column, newCell.Column);
-                        regions.Enqueue(RegionType.Box, newCell.Box);
+                        regions.Enqueue(RegionType.Row, coords.Row);
+                        regions.Enqueue(RegionType.Column, coords.Column);
+                        regions.Enqueue(RegionType.Box, coords.Box);
                     }
-
-                    removedOptions = true;
                 }
             }
-
-            return removedOptions;
         }
     }
 }

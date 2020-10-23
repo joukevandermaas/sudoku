@@ -13,9 +13,9 @@ namespace Sudoku
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
                 var cell = region[i];
-                if (cell.IsResolved)
+                if (cell.IsSingle)
                 {
-                    placedDigits = placedDigits.AddOptions(cell.Value);
+                    placedDigits = placedDigits.AddOptions(cell);
                 }
             }
 
@@ -29,7 +29,7 @@ namespace Sudoku
             for (var i = 0; i < Puzzle.LineLength; i++)
             {
                 var cell = region[i];
-                if (cell.HasOptions(digits))
+                if (!cell.IsSingle && cell.HasAnyOptions(digits))
                 {
                     positions = positions.AddOptions(SudokuValues.FromIndex(i));
                 }

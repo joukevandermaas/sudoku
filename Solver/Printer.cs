@@ -64,9 +64,10 @@ namespace Sudoku
                     }
                 }
 
-                if (puzzle[i].IsResolved)
+                var values = puzzle[RegionType.Row, i];
+                if (values.IsSingle)
                 {
-                    builder.AppendFormat(" {0} ", puzzle[i].ToString());
+                    builder.AppendFormat(" {0} ", values.ToString());
                 }
                 else
                 {
@@ -113,25 +114,26 @@ namespace Sudoku
                 builder.AppendLine("<section class='box'>");
                 indentation++;
 
-                foreach (var cell in box)
+                for (int i = 0; i < Puzzle.LineLength; i++)
                 {
-                    var hasChanged = cell != previous[cell.Index];
+                    var value = box[i];
+                    var hasChanged = value != previous[RegionType.Box, box.Index, i];
 
                     Indent();
                     builder.AppendFormat("<div class='cell {0} {1}'>",
-                        cell.IsResolved ? "resolved" : "options",
+                        value.IsSingle ? "resolved" : "options",
                         hasChanged ? "changed" : "");
                     builder.AppendLine();
                     indentation++;
 
-                    var options = cell.Value.GetOptions();
+                    var options = value.GetOptions();
                     var hasManyOptions = options.Count() > 5;
 
                     foreach (var opt in options)
                     {
                         var digit = opt.ToHumanValue();
 
-                        if (highlightDigit != 0 && highlightDigit != digit && !cell.IsResolved)
+                        if (highlightDigit != 0 && highlightDigit != digit && !value.IsSingle)
                         {
                             continue;
                         }

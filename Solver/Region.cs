@@ -12,11 +12,11 @@ namespace Sudoku
         Box
     }
 
-    public readonly struct Region : IEnumerable<Cell>, IEquatable<Region>
+    public readonly struct Region : IEnumerable<SudokuValues>, IEquatable<Region>
     {
-        private readonly Cell[] _allCells;
+        private readonly IndexablePosition[] _allCells;
 
-        public Region(Cell[] cells, RegionType type, int index)
+        public Region(IndexablePosition[] cells, RegionType type, int index)
         {
             _allCells = cells;
             Type = type;
@@ -27,60 +27,30 @@ namespace Sudoku
 
         public int Index { get; }
 
-        public ref Cell this[int i]
+        public SudokuValues this[int i]
         {
             get
             {
-                int offset;
-
-                switch (Type)
-                {
-                    case RegionType.Row:
-                        offset = (Index * Puzzle.LineLength) + i;
-                        break;
-
-                    case RegionType.Column:
-                        offset = Index + (i * Puzzle.LineLength);
-                        break;
-
-                    case RegionType.Box:
-                        // note: integer division!
-                        var insideBoxRow = i / Puzzle.BoxLength;
-                        var insideBoxCol = i % Puzzle.BoxLength;
-
-                        var outsideBoxRow = Index / Puzzle.BoxLength;
-                        var outsideBoxCol = Index % Puzzle.BoxLength;
-
-                        var row = outsideBoxRow * Puzzle.BoxLength + insideBoxRow;
-                        var col = outsideBoxCol * Puzzle.BoxLength + insideBoxCol;
-
-                        offset = (row * Puzzle.LineLength) + col;
-                        break;
-
-                    default:
-                        throw new NotImplementedException();
-                }
-
-                return ref _allCells[offset];
+                var pos = _allCells[(Index * Puzzle.LineLength) + i];
+                return pos.GetValue(Type);
             }
         }
 
-        public bool Contains(Cell cell)
+        public Coordinate GetCoordinate(int index)
+        {
+            var coordinate = new Coordinate(this.Type, this.Index, index);
+            return coordinate;
+        }
+
+        public CellUpdate UpdateCell(int index, SudokuValues newValue)
+        {
+            var coordinate = GetCoordinate(index);
+            return new CellUpdate(newValue, coordinate);
+        }
+
+        private IEnumerable<SudokuValues> GetValues()
         {
             for (int i = 0; i < Puzzle.LineLength; i++)
-            {
-                if (this[i] == cell)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private IEnumerable<Cell> GetCells()
-        {
-            for (var i = 0; i < Puzzle.LineLength; i++)
             {
                 yield return this[i];
             }
@@ -94,17 +64,22 @@ namespace Sudoku
 
                 for (int i = 0; i < Puzzle.LineLength; i++)
                 {
-                    var cell = this[i];
+                    var value = this[i];
 
-                    if (cell.IsResolved)
+                    if (value == SudokuValues.None)
                     {
-                        if (values.HasAnyOptions(cell.Value))
+                        return false;
+                    }
+
+                    if (value.IsSingle)
+                    {
+                        if (values.HasAnyOptions(value))
                         {
                             // already found that number, so not valid
                             return false;
                         }
 
-                        values = values.AddOptions(cell.Value);
+                        values = values.AddOptions(value);
                     }
                 }
 
@@ -117,9 +92,9 @@ namespace Sudoku
             return $"{Type} {Index + 1}";
         }
 
-        public IEnumerator<Cell> GetEnumerator() => GetCells().GetEnumerator();
+        public IEnumerator<SudokuValues> GetEnumerator() => GetValues().GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator() => GetCells().GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetValues().GetEnumerator();
 
         public bool Equals(Region other)
         {

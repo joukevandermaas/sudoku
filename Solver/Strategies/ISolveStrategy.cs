@@ -2,6 +2,6 @@
 {
     public interface ISolveStrategy
     {
-        ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions);
+        IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits);
     }
 }

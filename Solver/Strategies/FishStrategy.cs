@@ -1,4 +1,5 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 
 namespace Sudoku
@@ -6,65 +7,60 @@ namespace Sudoku
     public class FishStrategy : ISolveStrategy
     {
         private List<(Region region, SudokuValues positions)> _potentialRegions = new List<(Region region, SudokuValues positions)>(Puzzle.LineLength);
+        private BasicChangeSet _updatedCells = new BasicChangeSet();
 
         private readonly int _size;
-        private List<Cell> _updatedCells;
         private List<Region> _regions;
 
         public FishStrategy(int size)
         {
             _size = size;
-            _updatedCells = new List<Cell>(Puzzle.LineLength * _size);
             _regions = new List<Region>(_size);
         }
 
-        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
+        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
         {
             _updatedCells.Clear();
 
-            var changedRows = unprocessedRegions.Rows;
-            var changedCols = unprocessedRegions.Columns;
+            var changedRows = changedRegions.Rows;
+            var changedCols = changedRegions.Columns;
 
             for (var digit = 1; digit <= Puzzle.LineLength; digit++)
             {
+                var value = SudokuValues.FromHumanValue(digit);
+
+                if (!changedDigits.HasAnyOptions(value))
+                {
+                    continue;
+                }
+
                 if (changedRows != SudokuValues.None)
                 {
-                    FindSwordfish(puzzle, RegionType.Row, digit);
-
-                    if (_updatedCells.Count > 0)
-                    {
-                        return new ChangeSet(_updatedCells);
-                    }
+                    FindSwordfish(puzzle, RegionType.Row, value);
                 }
 
                 if (changedCols != SudokuValues.None)
                 {
-                    FindSwordfish(puzzle, RegionType.Column, digit);
-
-                    if (_updatedCells.Count > 0)
-                    {
-                        return new ChangeSet(_updatedCells);
-                    }
+                    FindSwordfish(puzzle, RegionType.Column, value);
                 }
             }
 
-            unprocessedRegions.Clear();
+            changedRegions.Clear();
 
-            return ChangeSet.Empty;
+            return _updatedCells;
         }
 
-        private void FindSwordfish(in Puzzle puzzle, RegionType type, int digit)
+        private void FindSwordfish(in Puzzle puzzle, RegionType type, SudokuValues digit)
         {
             _potentialRegions.Clear();
             _regions.Clear();
 
             var perpendicularType = type == RegionType.Row ? RegionType.Column : RegionType.Row;
-            var value = SudokuValues.FromHumanValue(digit);
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
                 var region = puzzle.GetRegion(type, i);
-                var positions = region.GetPositions(value);
+                var positions = region.GetPositions(digit);
                 var count = positions.GetOptionCount();
 
                 if (count > 1 && count <= _size)
@@ -123,9 +119,10 @@ namespace Sudoku
 
                 for (int i = 0; i < Puzzle.LineLength; i++)
                 {
+                    var coords = perpendicularRegion.GetCoordinate(i);
                     var cell = perpendicularRegion[i];
 
-                    if (!cell.HasOptions(value))
+                    if (!cell.HasAnyOptions(digit))
                     {
                         continue;
                     }
@@ -133,7 +130,7 @@ namespace Sudoku
                     var originalRegionsContains = false;
                     foreach (var region in _regions)
                     {
-                        if (region.Contains(cell))
+                        if (region.Index == i)
                         {
                             originalRegionsContains = true;
                             break;
@@ -145,14 +142,15 @@ namespace Sudoku
                         continue;
                     }
 
-                    _updatedCells.Add(cell.RemoveOptions(value));
+                    var update = new CellUpdate(digit, coords);
+                    _updatedCells.Add(update);
                 }
             }
 
-            if (_updatedCells.Count > 0)
+            if (!_updatedCells.IsEmpty)
             {
 #if DEBUG
-                Program.HighlightDigit = digit;
+                Program.HighlightDigit = digit.ToHumanValue();
                 Program.AddDebugText($"Fish of size {_size} in {string.Join(", ", _regions)}.");
 #endif
             }

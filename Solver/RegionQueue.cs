@@ -106,18 +106,6 @@ namespace Sudoku
             return false;
         }
 
-        public bool TryDequeue(Cell[] cells, out Region item)
-        {
-            if (TryDequeue(out var type, out var index))
-            {
-                item = new Region(cells, type, index);
-                return true;
-            }
-
-            item = default;
-            return false;
-        }
-
         public bool TryDequeue(Puzzle puzzle, out Region item)
         {
             if (TryDequeue(out var type, out var index))
@@ -172,6 +160,8 @@ namespace Sudoku
         public bool HasAnyRows => (_currentValues & _rowMask) != 0;
         public bool HasAnyColumns => (_currentValues & _colMask) != 0;
         public bool HasAnyBoxes => (_currentValues & _boxMask) != 0;
+
+        public bool IsEmpty => _currentValues == 0;
 
         public RegionQueue Clone()
         {

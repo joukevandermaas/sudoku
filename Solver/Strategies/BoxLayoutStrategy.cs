@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Sudoku
 {
@@ -8,30 +9,37 @@ namespace Sudoku
     /// </summary>
     public class BoxLayoutStrategy : ISolveStrategy
     {
-        private List<Cell> _updates = new List<Cell>(Puzzle.LineLength);
+        private BasicChangeSet _updates = new BasicChangeSet();
 
-        public ChangeSet Apply(in Puzzle puzzle, RegionQueue unprocessedRegions)
+        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
         {
             _updates.Clear();
 
-            while (unprocessedRegions.TryDequeueOfType(RegionType.Box, out int boxIndex))
+            while (changedRegions.TryDequeueOfType(RegionType.Box, out int boxIndex))
             {
                 var box = puzzle.Boxes[boxIndex];
 
                 for (int digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
                     var value = SudokuValues.FromHumanValue(digit);
+
+                    if (!changedDigits.HasAnyOptions(value))
+                    {
+                        continue;
+                    }
+
                     var rows = SudokuValues.None;
                     var cols = SudokuValues.None;
 
                     for (var i = 0; i < Puzzle.LineLength; i++)
                     {
-                        var cell = box[i];
+                        var cellValue = box[i];
+                        var cellCoord = box.GetCoordinate(i);
 
-                        if (cell.HasOptions(value))
+                        if (!cellValue.IsSingle && cellValue.HasAnyOptions(value))
                         {
-                            rows = rows.AddOptions(SudokuValues.FromIndex(cell.Row));
-                            cols = cols.AddOptions(SudokuValues.FromIndex(cell.Column));
+                            rows = rows.AddOptions(SudokuValues.FromIndex(cellCoord.Row));
+                            cols = cols.AddOptions(SudokuValues.FromIndex(cellCoord.Column));
                         }
                     }
 
@@ -40,14 +48,12 @@ namespace Sudoku
                         var region = puzzle.Rows[rows.ToIndex()];
                         RemoveFromOtherBoxesInRegion(region, value, boxIndex);
 
-                        if (_updates.Count > 0)
+                        if (!_updates.IsEmpty)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
                             Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
-
-                            return new ChangeSet(_updates);
                         }
                     }
                     if (cols.IsSingle)
@@ -55,35 +61,38 @@ namespace Sudoku
                         var region = puzzle.Columns[cols.ToIndex()];
                         RemoveFromOtherBoxesInRegion(region, value, boxIndex);
 
-                        if (_updates.Count > 0)
+                        if (!_updates.IsEmpty)
                         {
 #if DEBUG
                             Program.HighlightDigit = digit;
                             Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
 #endif
-                            return new ChangeSet(_updates);
                         }
 
                     }
                 }
             }
 
-            return ChangeSet.Empty;
+            return _updates;
         }
 
         private void RemoveFromOtherBoxesInRegion(Region region, SudokuValues value, int boxIndex)
         {
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
-                var cell = region[i];
-                if (cell.Box == boxIndex)
+                var coords = region.GetCoordinate(i);
+
+                if (coords.Box == boxIndex)
                 {
                     continue;
                 }
 
-                if (cell.HasOptions(value))
+                var cell = region[i];
+
+                if (!cell.IsSingle && cell.HasAnyOptions(value))
                 {
-                    _updates.Add(cell.RemoveOptions(value));
+                    var update = new CellUpdate(value, coords);
+                    _updates.Add(update);
                 }
             }
         }

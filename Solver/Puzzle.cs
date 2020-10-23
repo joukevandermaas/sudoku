@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Text;
 
 namespace Sudoku
 {
+
     public readonly struct Puzzle : IEquatable<Puzzle>
     {
         public const int LineLength = 9;
         public const int BoxLength = 3;
 
-        private readonly Cell[] _cells;
+        private readonly IndexablePosition[] _cells;
         private readonly Region[] _regions;
 
         public IReadOnlyList<Region> Rows { get; }
@@ -19,18 +19,22 @@ namespace Sudoku
 
         public static Puzzle FromString(string puzzle)
         {
-            var cells = new Cell[LineLength * LineLength];
+            var positions = new IndexablePosition[LineLength * LineLength];
 
-            for (var i = 0; i < cells.Length; i++)
+            for (var i = 0; i < positions.Length; i++)
             {
-                var cell = new Cell(SudokuValues.FromCharacter(puzzle[i]), (byte)i);
-                cells[i] = cell;
+                var value = SudokuValues.FromCharacter(puzzle[i]);
+                var coord = new Coordinate(RegionType.Row, i);
+
+                positions[coord.GlobalRowIndex] = positions[coord.GlobalRowIndex].SetRowValue(value);
+                positions[coord.GlobalColumnIndex] = positions[coord.GlobalColumnIndex].SetColumnValue(value);
+                positions[coord.GlobalBoxIndex] = positions[coord.GlobalBoxIndex].SetBoxValue(value);
             }
 
-            return new Puzzle(cells);
+            return new Puzzle(positions);
         }
 
-        public Puzzle(Cell[] cells)
+        public Puzzle(IndexablePosition[] cells)
         {
             _cells = cells;
 
@@ -48,6 +52,19 @@ namespace Sudoku
             Boxes = new ArraySegment<Region>(_regions, LineLength * 2, LineLength);
         }
 
+        public MutablePuzzle AsMutable()
+        {
+            var newCells = new IndexablePosition[_cells.Length];
+            Array.Copy(_cells, newCells, _cells.Length);
+
+            return new MutablePuzzle(newCells);
+        }
+
+        public SudokuValues this[RegionType type, int index]
+            => _cells[index].GetValue(type);
+        public SudokuValues this[RegionType type, int regionIndex, int indexInRegion]
+            => _cells[(regionIndex * LineLength) + indexInRegion].GetValue(type);
+
         public bool IsSolved
         {
             get
@@ -56,7 +73,7 @@ namespace Sudoku
                 {
                     var cell = _cells[i];
 
-                    if (!cell.IsResolved)
+                    if (!cell.RowValue.IsSingle)
                     {
                         return false;
                     }
@@ -66,23 +83,10 @@ namespace Sudoku
             }
         }
 
-        public Cell this[int i] => _cells[i];
-        public Cell this[int row, int col] => _cells[row * LineLength + col];
-
         public bool IsValid
         {
             get
             {
-                for (int i = 0; i < _cells.Length; i++)
-                {
-                    var cell = _cells[i];
-
-                    if (!cell.IsValid)
-                    {
-                        return false;
-                    }
-                }
-
                 for (int i = 0; i < Rows.Count; i++)
                 {
                     var row = Rows[i];
@@ -100,7 +104,7 @@ namespace Sudoku
                         return false;
                     }
                 }
-                
+
                 for (int i = 0; i < Boxes.Count; i++)
                 {
                     var box = Boxes[i];
@@ -114,29 +118,41 @@ namespace Sudoku
             }
         }
 
-        public ReadOnlyCollection<Cell> Cells => Array.AsReadOnly(_cells);
-
-        public Puzzle UpdateCell(Cell newValue)
+        public Puzzle UpdateCell(CellUpdate cell)
         {
-            var newCells = new Cell[LineLength * LineLength];
+            var newCells = new IndexablePosition[LineLength * LineLength];
             Array.Copy(_cells, newCells, _cells.Length);
 
-            newCells[newValue.Index] = newValue;
+            var coord = cell.Coordinate;
+
+            RemoveValues(newCells, coord, cell.RemovedOptions);
 
             return new Puzzle(newCells);
         }
 
-        public Puzzle UpdateCells(IEnumerable<Cell> newValues)
+        public Puzzle UpdateCells(IEnumerable<CellUpdate> newValues)
         {
-            var newCells = new Cell[LineLength * LineLength];
+            var newCells = new IndexablePosition[LineLength * LineLength];
             Array.Copy(_cells, newCells, _cells.Length);
 
             foreach (var cell in newValues)
             {
-                newCells[cell.Index] = cell;
+                var coord = cell.Coordinate;
+
+                RemoveValues(newCells, coord, cell.RemovedOptions);
             }
 
             return new Puzzle(newCells);
+        }
+
+        private static void RemoveValues(IndexablePosition[] array, Coordinate coordinate, SudokuValues valuesToRemove)
+        {
+            var currentValue = array[coordinate.GlobalRowIndex].RowValue;
+            var newValue = currentValue.RemoveOptions(valuesToRemove);
+
+            array[coordinate.GlobalRowIndex] = array[coordinate.GlobalRowIndex].SetRowValue(newValue);
+            array[coordinate.GlobalColumnIndex] = array[coordinate.GlobalColumnIndex].SetColumnValue(newValue);
+            array[coordinate.GlobalBoxIndex] = array[coordinate.GlobalBoxIndex].SetBoxValue(newValue);
         }
 
         public IEnumerable<Region> Regions => _regions;
@@ -165,9 +181,11 @@ namespace Sudoku
             {
                 var cell = _cells[i];
 
-                if (cell.IsResolved)
+                var value = cell.RowValue;
+
+                if (value.IsSingle)
                 {
-                    builder.Append(cell.Value.ToHumanValue());
+                    builder.Append(value.ToHumanValue());
                 }
                 else
                 {
