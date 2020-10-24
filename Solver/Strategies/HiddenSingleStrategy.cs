@@ -3,23 +3,19 @@ namespace Sudoku
 {
     public class HiddenSingleStrategy : ISolveStrategy
     {
-        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
+        public void Apply(MutablePuzzle puzzle, RegionQueue changedRegions)
         {
-            var mutablePuzzle = puzzle.AsMutable();
-
             // keep scanning regions for naked singles, removing
             // options when digits are placed. when a digit is placed,
             // its box, row and column are added back to 'regions' so
             // they can be scanned again.
-            while (changedRegions.TryDequeue(mutablePuzzle.Puzzle, out var region))
+            while (changedRegions.TryDequeue(puzzle.Puzzle, out var region))
             {
-                ScanRegion(changedRegions, mutablePuzzle, region, changedDigits);
+                ScanRegion(changedRegions, puzzle, region);
             }
-
-            return mutablePuzzle;
         }
 
-        private void ScanRegion(RegionQueue regions, MutablePuzzle puzzle, Region region, SudokuValues changedDigits)
+        private void ScanRegion(RegionQueue regions, MutablePuzzle puzzle, Region region)
         {
             var placedDigits = region.GetPlacedDigits();
 
@@ -27,7 +23,7 @@ namespace Sudoku
             {
                 var digit = SudokuValues.FromHumanValue(i);
 
-                if (!changedDigits.HasAnyOptions(digit) || placedDigits.HasAnyOptions(digit))
+                if (placedDigits.HasAnyOptions(digit))
                 {
                     continue;
                 }
@@ -40,8 +36,7 @@ namespace Sudoku
                     var coords = region.GetCoordinate(index);
 
                     var update = new CellUpdate(digit.Invert(), coords);
-                    var newlyChanged = puzzle.RemoveOptions(update);
-                    changedDigits = changedDigits.AddOptions(newlyChanged).RemoveOptions(digit);
+                    puzzle.RemoveOptions(update);
 
                     regions.Enqueue(RegionType.Row, coords.Row);
                     regions.Enqueue(RegionType.Column, coords.Column);

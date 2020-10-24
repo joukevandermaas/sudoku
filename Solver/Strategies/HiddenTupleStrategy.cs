@@ -1,12 +1,10 @@
 ﻿
 using System.Buffers;
-using System.Collections.Generic;
 
 namespace Sudoku
 {
     public class HiddenTupleStrategy : ISolveStrategy
     {
-        private BasicChangeSet _updatedCells = new BasicChangeSet();
         private readonly int _size;
 
         public HiddenTupleStrategy(int size)
@@ -14,21 +12,17 @@ namespace Sudoku
             _size = size;
         }
 
-        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
+        public void Apply(MutablePuzzle puzzle, RegionQueue changedRegions)
         {
-            _updatedCells.Clear();
-
             while (changedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                FindTuple(puzzle, region, placedDigits, changedDigits);
+                FindTuple(puzzle, changedRegions, region, placedDigits);
             }
-
-            return _updatedCells;
         }
 
-        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits, SudokuValues changedDigits)
+        private void FindTuple(MutablePuzzle puzzle, RegionQueue regions, Region region, SudokuValues placedDigits)
         {
             var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
@@ -36,7 +30,7 @@ namespace Sudoku
             {
                 var comb = combinations[i];
 
-                if (placedDigits.HasAnyOptions(comb) || !changedDigits.HasAnyOptions(comb))
+                if (placedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -54,6 +48,7 @@ namespace Sudoku
                 var options = ArrayPool<int>.Shared.Rent(Puzzle.LineLength);
                 var count = positions.CopyIndices(options);
                 var opposite = comb.Invert();
+                var anyChanged = false;
 
                 for (var index = 0; index < count; index++)
                 {
@@ -61,17 +56,22 @@ namespace Sudoku
 
                     if (!cell.IsSingle && cell.HasAnyOptions(opposite))
                     {
-                        var update = region.UpdateCell(options[index], opposite);
-                        _updatedCells.Add(update);
+                        var update = region.RemoveOptions(options[index], opposite);
+                        puzzle.RemoveOptions(update);
+                        anyChanged = true;
+
+                        regions.Enqueue(RegionType.Row, update.Coordinate.Row);
+                        regions.Enqueue(RegionType.Column, update.Coordinate.Column);
+                        regions.Enqueue(RegionType.Box, update.Coordinate.Box);
                     }
                 }
 
                 ArrayPool<int>.Shared.Return(options);
 
-                if (!_updatedCells.IsEmpty)
+                if (anyChanged)
                 {
 #if DEBUG
-                    Program.AddDebugText($"Hidden {comb} tuple in {region}");
+                    Program.Debugger.AddAction($"Hidden {comb} tuple in {region}");
 #endif
                     return;
                 }

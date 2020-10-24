@@ -9,21 +9,18 @@ namespace Sudoku
     /// </summary>
     public class BoxLayoutStrategy : ISolveStrategy
     {
-        private BasicChangeSet _updates = new BasicChangeSet();
-
-        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
+        public void Apply(MutablePuzzle puzzle, RegionQueue changedRegions)
         {
-            _updates.Clear();
-
             while (changedRegions.TryDequeueOfType(RegionType.Box, out int boxIndex))
             {
-                var box = puzzle.Boxes[boxIndex];
+                var box = puzzle.Puzzle.Boxes[boxIndex];
+                var placedDigits = box.GetPlacedDigits();
 
                 for (int digit = 1; digit <= Puzzle.LineLength; digit++)
                 {
                     var value = SudokuValues.FromHumanValue(digit);
 
-                    if (!changedDigits.HasAnyOptions(value))
+                    if (placedDigits.HasAnyOptions(value))
                     {
                         continue;
                     }
@@ -45,39 +42,38 @@ namespace Sudoku
 
                     if (rows.IsSingle)
                     {
-                        var region = puzzle.Rows[rows.ToIndex()];
-                        RemoveFromOtherBoxesInRegion(region, value, boxIndex);
+                        var region = puzzle.Puzzle.Rows[rows.ToIndex()];
+                        var anyChanged = RemoveFromOtherBoxesInRegion(puzzle, region, value, boxIndex);
 
-                        if (!_updates.IsEmpty)
+                        if (anyChanged)
                         {
 #if DEBUG
-                            Program.HighlightDigit = digit;
-                            Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
+                            Program.Debugger.AddAction($"{digit}s in {box} remove others in {region}.");
 #endif
+                            return;
                         }
                     }
                     if (cols.IsSingle)
                     {
-                        var region = puzzle.Columns[cols.ToIndex()];
-                        RemoveFromOtherBoxesInRegion(region, value, boxIndex);
+                        var region = puzzle.Puzzle.Columns[cols.ToIndex()];
+                        var anyChanged = RemoveFromOtherBoxesInRegion(puzzle, region, value, boxIndex);
 
-                        if (!_updates.IsEmpty)
+                        if (anyChanged)
                         {
 #if DEBUG
-                            Program.HighlightDigit = digit;
-                            Program.AddDebugText($"{digit}s in {box} remove others in {region}.");
+                            Program.Debugger.AddAction($"{digit}s in {box} remove others in {region}.");
 #endif
+                            return;
                         }
 
                     }
                 }
             }
-
-            return _updates;
         }
 
-        private void RemoveFromOtherBoxesInRegion(Region region, SudokuValues value, int boxIndex)
+        private bool RemoveFromOtherBoxesInRegion(MutablePuzzle puzzle, Region region, SudokuValues value, int boxIndex)
         {
+            var anyChanged = false;
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
                 var coords = region.GetCoordinate(i);
@@ -92,9 +88,12 @@ namespace Sudoku
                 if (!cell.IsSingle && cell.HasAnyOptions(value))
                 {
                     var update = new CellUpdate(value, coords);
-                    _updates.Add(update);
+                    puzzle.RemoveOptions(update);
+                    anyChanged = true;
                 }
             }
+
+            return anyChanged;
         }
 
     }

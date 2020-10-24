@@ -12,14 +12,9 @@
 
         public bool IsEmpty => false;
 
-        public SudokuValues AddModifiedDigits(SudokuValues values)
+        public void ApplyToPuzzle(MutablePuzzle puzzle)
         {
-            return values.AddOptions(_update.RemovedOptions);
-        }
-
-        public Puzzle ApplyToPuzzle(Puzzle puzzle)
-        {
-            return puzzle.UpdateCell(_update);
+            puzzle.RemoveOptions(_update);
         }
 
         public void ApplyToRegionQueue(RegionQueue queue)

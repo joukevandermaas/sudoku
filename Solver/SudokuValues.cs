@@ -14,7 +14,7 @@ namespace Sudoku
         public static SudokuValues FromIndex(int value) => new SudokuValues(1 << value);
         public static SudokuValues FromCharacter(char value)
         {
-            var digit = (int)(value - 48); // 48 is 0 in ascii
+            var digit = value - '0';
             var values = digit < 1 || digit > 9
                 ? SudokuValues.All
                 : SudokuValues.FromHumanValue(digit);
@@ -123,16 +123,11 @@ namespace Sudoku
 
         public int GetOptionCount()
         {
-            var count = 0;
-            for (int i = 1; i <= Puzzle.LineLength; i++)
-            {
-                var option = SudokuValues.FromHumanValue(i);
-                if (HasAnyOptions(option))
-                {
-                    count += 1;
-                }
-            }
-            return count;
+            // see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSet64
+            var value = (ulong)Values;
+            var fastCount = (value * 0x200040008001UL & 0x111111111111111UL) % 0xf;
+
+            return (int)fastCount;
         }
 
         public static bool operator ==(SudokuValues left, SudokuValues right) => left.Equals(right);

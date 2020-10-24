@@ -42,7 +42,7 @@ namespace Sudoku
             return coordinate;
         }
 
-        public CellUpdate UpdateCell(int index, SudokuValues newValue)
+        public CellUpdate RemoveOptions(int index, SudokuValues newValue)
         {
             var coordinate = GetCoordinate(index);
             return new CellUpdate(newValue, coordinate);

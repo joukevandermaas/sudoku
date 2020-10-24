@@ -7,9 +7,9 @@ namespace Sudoku
         public SudokuValues RemovedOptions { get; }
         public Coordinate Coordinate { get; }
 
-        public CellUpdate(SudokuValues value, Coordinate coordinate)
+        public CellUpdate(SudokuValues removedOptions, Coordinate coordinate)
         {
-            RemovedOptions = value;
+            RemovedOptions = removedOptions;
             Coordinate = coordinate;
         }
 

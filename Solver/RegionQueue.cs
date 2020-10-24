@@ -106,6 +106,18 @@ namespace Sudoku
             return false;
         }
 
+        public bool TryDequeue(MutablePuzzle puzzle, out Region item)
+        {
+            if (TryDequeue(out var type, out var index))
+            {
+                item = puzzle.Puzzle.GetRegion(type, index);
+                return true;
+            }
+
+            item = default;
+            return false;
+        }
+
         public bool TryDequeue(Puzzle puzzle, out Region item)
         {
             if (TryDequeue(out var type, out var index))

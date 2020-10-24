@@ -118,42 +118,6 @@ namespace Sudoku
             }
         }
 
-        public Puzzle UpdateCell(CellUpdate cell)
-        {
-            var newCells = new IndexablePosition[LineLength * LineLength];
-            Array.Copy(_cells, newCells, _cells.Length);
-
-            var coord = cell.Coordinate;
-
-            RemoveValues(newCells, coord, cell.RemovedOptions);
-
-            return new Puzzle(newCells);
-        }
-
-        public Puzzle UpdateCells(IEnumerable<CellUpdate> newValues)
-        {
-            var newCells = new IndexablePosition[LineLength * LineLength];
-            Array.Copy(_cells, newCells, _cells.Length);
-
-            foreach (var cell in newValues)
-            {
-                var coord = cell.Coordinate;
-
-                RemoveValues(newCells, coord, cell.RemovedOptions);
-            }
-
-            return new Puzzle(newCells);
-        }
-
-        private static void RemoveValues(IndexablePosition[] array, Coordinate coordinate, SudokuValues valuesToRemove)
-        {
-            var currentValue = array[coordinate.GlobalRowIndex].RowValue;
-            var newValue = currentValue.RemoveOptions(valuesToRemove);
-
-            array[coordinate.GlobalRowIndex] = array[coordinate.GlobalRowIndex].SetRowValue(newValue);
-            array[coordinate.GlobalColumnIndex] = array[coordinate.GlobalColumnIndex].SetColumnValue(newValue);
-            array[coordinate.GlobalBoxIndex] = array[coordinate.GlobalBoxIndex].SetBoxValue(newValue);
-        }
 
         public IEnumerable<Region> Regions => _regions;
 

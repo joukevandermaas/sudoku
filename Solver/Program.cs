@@ -4,9 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-#if DEBUG
-using System.Text;
-#endif
 
 namespace Sudoku
 {
@@ -29,20 +26,17 @@ namespace Sudoku
         const string bruteforce = "300060005020000040007000200000607000900080006000901000002000700040000010600050009";
         const string ctc5 = "701030000080706000003050900000402090000070105000005080100000309030000060905000001";
 
-        const string currentPuzzle = ctc5;
+        const string currentPuzzle = "009001087000000400001080060000836020006000000450007006500008009010060002000420000";
 
 #if DEBUG
-        public static int HighlightDigit = 0;
-        private static string _debugText = string.Empty;
-
-        public static void AddDebugText(string text, string classList = "") => _debugText += $"<p class='{classList}'>" + text + "<p>\r\n";
+        internal static PuzzleDebugger Debugger = new PuzzleDebugger();
 #endif
 
         private const bool _profiling = false;
 
         static void Main(string[] args)
         {
-            if (args.Any(a => a.Contains("debug")) || Debugger.IsAttached)
+            if (args.Any(a => a.Contains("debug")) || System.Diagnostics.Debugger.IsAttached)
             {
                 const string puzzle = currentPuzzle;
                 SolveDebug(puzzle);
@@ -125,11 +119,13 @@ namespace Sudoku
 
         static (TimeSpan, bool, Puzzle) SolveFast(in Puzzle puzzle)
         {
-            var solver = new Solver(puzzle, maxSteps: 100, maxBruteForceDepth: 5);
+            var solver = new Solver(puzzle, allowBruteForce: true);
 
             var time = Stopwatch.StartNew();
             var (result, solvedPuzzle) = solver.Solve();
             time.Stop();
+
+            // if (result != SolveResult.Success) Console.WriteLine(puzzle);
 
             return (time.Elapsed, result == SolveResult.Success, solvedPuzzle);
         }
@@ -139,156 +135,19 @@ namespace Sudoku
 #if DEBUG
             var puzzle = Puzzle.FromString(sudoku);
 
-            var solver = new Solver(puzzle, maxSteps: 100, maxBruteForceDepth: 1);
+            Debugger.Start();
 
-            var builder = new StringBuilder();
-            builder.AppendLine(_htmlStart);
+            var solver = new Solver(puzzle, allowBruteForce: true);
+            var (result, endState) = solver.Solve();
 
-            int step = 1;
-            while (!puzzle.IsSolved && puzzle.IsValid)
-            {
-                HighlightDigit = 0;
-                _debugText = string.Empty;
+            Debugger.AddResult(result, endState);
+            Debugger.End();
 
-                var (success, strat) = solver.Advance();
-                var newPuzzle = solver.CurrentPuzzle;
+            File.WriteAllText("test.html", Debugger.ToString());
 
-                if (success)
-                {
-                    builder.AppendFormat("<h3>{0}. {1}</h3>", step, strat);
-                    if (!string.IsNullOrEmpty(_debugText))
-                    {
-                        builder.AppendLine(_debugText);
-                    }
-
-                    builder.AppendLine("<div class='step'>");
-                    builder.AppendLine(Printer.ForBrowser(puzzle, puzzle, HighlightDigit));
-                    builder.AppendLine(Printer.ForBrowser(newPuzzle, puzzle));
-                    builder.AppendLine("</div>"); // step
-
-                    puzzle = newPuzzle;
-
-                    builder.AppendLine("<hr>");
-                }
-                else
-                {
-                    puzzle = newPuzzle;
-                    break;
-                }
-
-                step++;
-            }
-
-            var status = puzzle.IsSolved ? "Solved" : puzzle.IsValid ? "Failed" : "Invalid";
-            builder.AppendFormat("<h3>{0}</h3>", status);
-
-            if (!puzzle.IsSolved && !string.IsNullOrEmpty(_debugText))
-            {
-                builder.AppendLine(_debugText);
-            }
-
-            builder.AppendLine("<div class='step'>");
-            builder.AppendLine(Printer.ForBrowser(puzzle, puzzle));
-            builder.AppendLine("</div>"); // step
-
-            for (int i = 1; i <= Puzzle.LineLength; i++)
-            {
-                builder.AppendLine("<div class='step'>");
-                builder.AppendLine(Printer.ForBrowser(puzzle, puzzle, highlightDigit: i));
-                builder.AppendLine("</div>"); // step
-            }
-
-            builder.AppendLine(_htmlEnd);
-
-            File.WriteAllText("test.html", builder.ToString());
-
-            Console.WriteLine(Printer.ForConsole(puzzle));
-            Console.WriteLine(status);
+            Console.WriteLine(Printer.ForConsole(endState));
+            Console.WriteLine(result);
 #endif
         }
-
-        public const string _htmlStart = @"<!doctype html>
-
-<html>
-  <head>
-    <title>Sudoku</title>
-<style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  font-family: sans-serif;
-}
-
-.step {
-    display: flex;
-    flex-direction: row;
-}
-
-.container {
-  width: 540px;
-  margin: 60px 30px;
-  display: grid;
-  grid-template-columns: repeat(3, 180px);
-  grid-template-rows: repeat(3, 180px);
-
-  border-left: 3px solid black;
-  border-top: 3px solid black;
-}
-
-.box {
-  display: grid;
-  grid-template-columns: repeat(3, 60px);
-  grid-template-rows: repeat(3, 60px);
-
-  border-right: 3px solid black;
-  border-bottom: 3px solid black;
-}
-
-.cell {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-
-  border-right: 1px solid black;
-  border-bottom: 1px solid black;
-}
-
-.cell.changed {
-  color: #1b74d3;
-  font-weight: bold;
-}
-
-.highlight {
-  color: red;
-  font-weight: bold;
-}
-
-.resolved .number {
-  font-size: 32pt;
-}
-
-.options .number {
-  font-size: 10pt;
-}
-
-.number.many {
-  font-size: 6pt;
-}
-
-.small {
-  font-size: 8pt;
-  font-style: italic;
-}
-
-</style>
-  </head>
-  <body>";
-
-        public const string _htmlEnd = @"
-  </body>
-</html>";
     }
 }

@@ -9,7 +9,6 @@ namespace Sudoku
     /// </summary>
     public class TupleStrategy : ISolveStrategy
     {
-        private BasicChangeSet _updatedCells = new BasicChangeSet();
         private readonly int _size;
 
         public TupleStrategy(int size)
@@ -17,21 +16,17 @@ namespace Sudoku
             _size = size;
         }
 
-        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
+        public void Apply(MutablePuzzle puzzle, RegionQueue changedRegions)
         {
-            _updatedCells.Clear();
-
             while (changedRegions.TryDequeue(puzzle, out var region))
             {
                 var placedDigits = region.GetPlacedDigits();
 
-                FindTuple(puzzle, region, placedDigits, changedDigits);
+                FindTuple(puzzle, changedRegions, region, placedDigits);
             }
-
-            return _updatedCells;
         }
 
-        private void FindTuple(in Puzzle puzzle, Region region, SudokuValues placedDigits, SudokuValues changedDigits)
+        private void FindTuple(MutablePuzzle puzzle, RegionQueue regions, Region region, SudokuValues placedDigits)
         {
             var combinations = Helpers.GetCombinationIndices(Puzzle.LineLength, _size);
 
@@ -39,7 +34,7 @@ namespace Sudoku
             {
                 var comb = combinations[j];
 
-                if (placedDigits.HasAnyOptions(comb) || !changedDigits.HasAnyOptions(comb))
+                if (placedDigits.HasAnyOptions(comb))
                 {
                     // skip any tuples that include placed digits
                     continue;
@@ -82,16 +77,17 @@ namespace Sudoku
                             continue;
                         }
 
-                        var newCell = region.UpdateCell(i, possibleValues);
-                        _updatedCells.Add(newCell);
+                        var newCell = region.RemoveOptions(i, possibleValues);
+                        puzzle.RemoveOptions(newCell);
+
+                        regions.Enqueue(RegionType.Row, newCell.Coordinate.Row);
+                        regions.Enqueue(RegionType.Column, newCell.Coordinate.Column);
+                        regions.Enqueue(RegionType.Box, newCell.Coordinate.Box);
+#if DEBUG
+                        Program.Debugger.AddAction($"{possibleValues} tuple in {region}.");
+#endif
                     }
 
-#if DEBUG
-                    if (!_updatedCells.IsEmpty)
-                    {
-                        Program.AddDebugText($"{possibleValues} tuple in {region}.");
-                    }
-#endif
                 }
             }
         }

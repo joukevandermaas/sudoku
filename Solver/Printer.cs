@@ -99,7 +99,7 @@ namespace Sudoku
             }
         }
 
-        public static string ForBrowser(Puzzle puzzle, Puzzle previous, int highlightDigit = 0)
+        public static string ForBrowser(Puzzle original, Puzzle updated, int highlightDigit = 0)
         {
             var builder = new StringBuilder();
             int indentation = 0;
@@ -108,7 +108,7 @@ namespace Sudoku
             builder.AppendLine("<div class='container'>");
             indentation++;
 
-            foreach (var box in puzzle.Boxes)
+            foreach (var box in updated.Boxes)
             {
                 Indent();
                 builder.AppendLine("<section class='box'>");
@@ -117,7 +117,7 @@ namespace Sudoku
                 for (int i = 0; i < Puzzle.LineLength; i++)
                 {
                     var value = box[i];
-                    var hasChanged = value != previous[RegionType.Box, box.Index, i];
+                    var hasChanged = value != original[RegionType.Box, box.Index, i];
 
                     Indent();
                     builder.AppendFormat("<div class='cell {0} {1}'>",

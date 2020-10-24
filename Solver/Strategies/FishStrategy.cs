@@ -7,7 +7,6 @@ namespace Sudoku
     public class FishStrategy : ISolveStrategy
     {
         private List<(Region region, SudokuValues positions)> _potentialRegions = new List<(Region region, SudokuValues positions)>(Puzzle.LineLength);
-        private BasicChangeSet _updatedCells = new BasicChangeSet();
 
         private readonly int _size;
         private List<Region> _regions;
@@ -18,10 +17,8 @@ namespace Sudoku
             _regions = new List<Region>(_size);
         }
 
-        public IChangeSet Apply(in Puzzle puzzle, RegionQueue changedRegions, SudokuValues changedDigits)
+        public void Apply(MutablePuzzle puzzle, RegionQueue changedRegions)
         {
-            _updatedCells.Clear();
-
             var changedRows = changedRegions.Rows;
             var changedCols = changedRegions.Columns;
 
@@ -29,28 +26,27 @@ namespace Sudoku
             {
                 var value = SudokuValues.FromHumanValue(digit);
 
-                if (!changedDigits.HasAnyOptions(value))
-                {
-                    continue;
-                }
-
                 if (changedRows != SudokuValues.None)
                 {
-                    FindSwordfish(puzzle, RegionType.Row, value);
+                    if (FindSwordfish(puzzle, RegionType.Row, value))
+                    {
+                        return;
+                    }
                 }
 
                 if (changedCols != SudokuValues.None)
                 {
-                    FindSwordfish(puzzle, RegionType.Column, value);
+                    if (FindSwordfish(puzzle, RegionType.Column, value))
+                    {
+                        return;
+                    }
                 }
             }
 
             changedRegions.Clear();
-
-            return _updatedCells;
         }
 
-        private void FindSwordfish(in Puzzle puzzle, RegionType type, SudokuValues digit)
+        private bool FindSwordfish(MutablePuzzle puzzle, RegionType type, SudokuValues digit)
         {
             _potentialRegions.Clear();
             _regions.Clear();
@@ -59,7 +55,7 @@ namespace Sudoku
 
             for (int i = 0; i < Puzzle.LineLength; i++)
             {
-                var region = puzzle.GetRegion(type, i);
+                var region = puzzle.Puzzle.GetRegion(type, i);
                 var positions = region.GetPositions(digit);
                 var count = positions.GetOptionCount();
 
@@ -72,7 +68,7 @@ namespace Sudoku
             // cannot find a swordfish, because we don't have enough rows/columns
             if (_potentialRegions.Count < _size)
             {
-                return;
+                return false;
             }
 
             var combinations = Helpers.GetCombinationIndices(_potentialRegions.Count, _size);
@@ -107,7 +103,7 @@ namespace Sudoku
             // no 3 rows/columns had options in exactly 3 spots
             if (!foundFish)
             {
-                return;
+                return false;
             }
 
             // we found a swordfish!
@@ -115,7 +111,7 @@ namespace Sudoku
 
             foreach (var option in options)
             {
-                var perpendicularRegion = puzzle.GetRegion(perpendicularType, option);
+                var perpendicularRegion = puzzle.Puzzle.GetRegion(perpendicularType, option);
 
                 for (int i = 0; i < Puzzle.LineLength; i++)
                 {
@@ -143,17 +139,16 @@ namespace Sudoku
                     }
 
                     var update = new CellUpdate(digit, coords);
-                    _updatedCells.Add(update);
+                    puzzle.RemoveOptions(update);
+#if DEBUG
+                    Program.Debugger.AddAction($"Fish of size {_size} in {string.Join(", ", _regions)}.");
+#endif
+                    return true;
                 }
             }
 
-            if (!_updatedCells.IsEmpty)
-            {
-#if DEBUG
-                Program.HighlightDigit = digit.ToHumanValue();
-                Program.AddDebugText($"Fish of size {_size} in {string.Join(", ", _regions)}.");
-#endif
-            }
+            return false;
+
         }
     }
 }

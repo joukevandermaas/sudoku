@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Channels;
 
 namespace Sudoku
 {
@@ -13,21 +14,14 @@ namespace Sudoku
 
     public class Solver
     {
-        private readonly int _maxSteps;
+        public MutablePuzzle Puzzle { get; private set; }
 
-        public Puzzle CurrentPuzzle { get; private set; }
-
-        public int MaxBruteForceDepth { get; }
-
-        private readonly List<SudokuValues> _digits;
         private readonly List<RegionQueue> _regionQueues;
         private readonly List<(ISolveStrategy strat, string name)> _strategies;
 
-        public Solver(Puzzle puzzle, int maxSteps, int maxBruteForceDepth)
+        public Solver(Puzzle puzzle, bool allowBruteForce)
         {
-            CurrentPuzzle = puzzle;
-            _maxSteps = maxSteps;
-            MaxBruteForceDepth = maxBruteForceDepth;
+            Puzzle = puzzle.AsMutable();
 
             _strategies = new List<(ISolveStrategy, string)>
             {
@@ -44,40 +38,38 @@ namespace Sudoku
                 (new FishStrategy(3), "swordfish"),
             };
 
-            if (MaxBruteForceDepth > 0)
+            if (allowBruteForce)
             {
-                _strategies.Add((new BruteForceStrategy2(this), "brute force (options in cell)"));
-                _strategies.Add((new BruteForceStrategy(this), "brute force (options in region)"));
+                _strategies.Add((new GuessStrategy(this), "guess"));
             }
 
             _regionQueues = new List<RegionQueue>(_strategies.Count);
-            _digits = new List<SudokuValues>(_strategies.Count);
 
             for (int i = 0; i < _strategies.Count; i++)
             {
                 _regionQueues.Add(RegionQueue.GetFull());
-                _digits.Add(SudokuValues.None);
             }
         }
 
         internal Solver(IChangeSet changeSet, Solver other)
         {
-            CurrentPuzzle = changeSet.ApplyToPuzzle(other.CurrentPuzzle);
-            _maxSteps = other._maxSteps;
-            MaxBruteForceDepth = other.MaxBruteForceDepth;
+            Puzzle = other.Puzzle.Clone().AsMutable();
+
+            changeSet.ApplyToPuzzle(Puzzle);
+
+#if DEBUG
+            Program.Debugger.AddComparison(other.Puzzle.Puzzle, Puzzle.Puzzle);
+#endif
 
             _strategies = other._strategies;
 
             _regionQueues = new List<RegionQueue>(_strategies.Count);
-            _digits = new List<SudokuValues>(_strategies.Count);
 
             for (int i = 0; i < _strategies.Count; i++)
             {
                 var queue = other._regionQueues[i].Clone();
                 changeSet.ApplyToRegionQueue(queue);
                 _regionQueues.Add(queue);
-
-                _digits.Add(changeSet.AddModifiedDigits(other._digits[i]));
             }
         }
 
@@ -85,12 +77,14 @@ namespace Sudoku
         {
             var actualSteps = 0;
 
-            while (!CurrentPuzzle.IsSolved && CurrentPuzzle.IsValid)
+            while (!Puzzle.Puzzle.IsSolved && Puzzle.Puzzle.IsValid)
             {
-                if (actualSteps >= _maxSteps)
+#if DEBUG
+                if (actualSteps >= 100) // avoid infinite loops
                 {
                     break;
                 }
+#endif
 
                 var (success, _) = Advance();
 
@@ -103,16 +97,16 @@ namespace Sudoku
 
             SolveResult result;
 
-            if (CurrentPuzzle.IsSolved)
+            if (Puzzle.Puzzle.IsSolved)
             {
                 result = SolveResult.Success;
             }
             else
             {
-                result = !CurrentPuzzle.IsValid ? SolveResult.Invalid : SolveResult.Failure;
+                result = !Puzzle.Puzzle.IsValid ? SolveResult.Invalid : SolveResult.Failure;
             }
 
-            return (result, CurrentPuzzle);
+            return (result, Puzzle.Puzzle);
         }
 
         public (bool success, string? method) Advance()
@@ -121,31 +115,26 @@ namespace Sudoku
             {
                 var (strat, name) = _strategies[i];
                 var workQueue = _regionQueues[i];
-                var digits = _digits[i];
 #if DEBUG
-                Program.AddDebugText($"{name} is considering regions: {workQueue}", "small");
-                Program.AddDebugText($"{name} is considering digits: {digits}", "small");
+                Program.Debugger.AddComment($"{name} is considering regions: {workQueue}");
+                var oldPuzzle = Puzzle.Clone();
 #endif
 
-                var changeSet = strat.Apply(CurrentPuzzle, workQueue, digits);
-
-                _digits[i] = SudokuValues.None;
+                var changeSet = Puzzle.Snapshot();
+                strat.Apply(Puzzle, workQueue);
 
                 if (changeSet.IsEmpty)
                 {
                     continue;
                 }
 #if DEBUG
-                Program.AddDebugText($"<br>{name} changed: {changeSet}", "small");
+                Program.Debugger.AddComment($"{name} changed: {changeSet}");
+                Program.Debugger.AddComparison(oldPuzzle, Puzzle.Puzzle);
 #endif
-
-                var newPuzzle = changeSet.ApplyToPuzzle(CurrentPuzzle);
-                CurrentPuzzle = newPuzzle;
 
                 for (int j = 0; j < _regionQueues.Count; j++)
                 {
                     changeSet.ApplyToRegionQueue(_regionQueues[j]);
-                    _digits[j] = changeSet.AddModifiedDigits(_digits[j]);
                 }
 
                 return (true, name);

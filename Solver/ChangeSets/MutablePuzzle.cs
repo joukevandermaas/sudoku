@@ -1,24 +1,43 @@
-﻿namespace Sudoku
+﻿using System;
+using System.Collections.Generic;
+
+namespace Sudoku
 {
-    public class MutablePuzzle : IChangeSet
+    public class MutablePuzzle
     {
-        private readonly RegionQueue _queue;
-        private readonly IndexablePosition[] _cells;
+        private IndexablePosition[] _cells;
+        private ChangeSet _currentChangeSet = new ChangeSet();
 
         public Puzzle Puzzle { get; }
-
-        public bool IsEmpty => _queue.IsEmpty;
-
-        public SudokuValues ModifiedDigits { get; set; }
 
         public MutablePuzzle(IndexablePosition[] cells)
         {
             _cells = cells;
-            _queue = RegionQueue.GetEmpty();
             Puzzle = new Puzzle(_cells);
         }
 
-        public SudokuValues RemoveOptions(Coordinate coordinate, SudokuValues removedOptions)
+        public IChangeSet Snapshot()
+        {
+            _currentChangeSet.Clear();
+
+            return _currentChangeSet;
+        }
+
+        public Puzzle Clone()
+        {
+            var newCells = new IndexablePosition[_cells.Length];
+            Array.Copy(_cells, newCells, _cells.Length);
+
+            return new Puzzle(newCells);
+        }
+
+        public void Absorb(MutablePuzzle other)
+        {
+            Array.Copy(other._cells, _cells, _cells.Length);
+            _currentChangeSet.Queue.EnqueueAll(RegionQueue.GetFull());
+        }
+
+        public void RemoveOptions(Coordinate coordinate, SudokuValues removedOptions)
         {
             var row = coordinate.GlobalRowIndex;
             var col = coordinate.GlobalColumnIndex;
@@ -31,44 +50,51 @@
             _cells[col] = _cells[col].SetColumnValue(newValue);
             _cells[box] = _cells[box].SetBoxValue(newValue);
 
-            _queue.Enqueue(RegionType.Row, row / Puzzle.LineLength);
-            _queue.Enqueue(RegionType.Column, col / Puzzle.LineLength);
-            _queue.Enqueue(RegionType.Box, box / Puzzle.LineLength);
-
-            var change = new SudokuValues(currentValue.Values & removedOptions.Values);
-            ModifiedDigits = ModifiedDigits.AddOptions(change);
-
-            return change;
+            _currentChangeSet.Queue.Enqueue(RegionType.Row, row / Puzzle.LineLength);
+            _currentChangeSet.Queue.Enqueue(RegionType.Column, col / Puzzle.LineLength);
+            _currentChangeSet.Queue.Enqueue(RegionType.Box, box / Puzzle.LineLength);
         }
 
-        public SudokuValues RemoveOptions(CellUpdate update)
-        {
-            return RemoveOptions(update.Coordinate, update.RemovedOptions);
-        }
+        public void RemoveOptions(CellUpdate update) => RemoveOptions(update.Coordinate, update.RemovedOptions);
 
-        public void MarkAllAsChanged()
+        public void RemoveOptions(IEnumerable<CellUpdate> newValues)
         {
-            _queue.EnqueueAll(RegionQueue.GetFull());
-        }
-
-        public Puzzle ApplyToPuzzle(Puzzle puzzle)
-        {
-            return Puzzle;
-        }
-
-        public void ApplyToRegionQueue(RegionQueue queue)
-        {
-            queue.EnqueueAll(_queue);
+            foreach (var cell in newValues)
+            {
+                RemoveOptions(cell);
+            }
         }
 
         public override string ToString()
         {
-            return _queue.ToString() + ", digits: " + ModifiedDigits;
+            return Puzzle.ToString();
         }
 
-        public SudokuValues AddModifiedDigits(SudokuValues values)
+        private class ChangeSet : IChangeSet
         {
-            return values.AddOptions(ModifiedDigits);
+            public RegionQueue Queue { get; } = RegionQueue.GetEmpty();
+
+            public bool IsEmpty => Queue.IsEmpty;
+
+            public void ApplyToPuzzle(MutablePuzzle puzzle)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void ApplyToRegionQueue(RegionQueue queue)
+            {
+                queue.EnqueueAll(Queue);
+            }
+
+            public override string ToString()
+            {
+                return $"{Queue}";
+            }
+
+            public void Clear()
+            {
+                Queue.Clear();
+            }
         }
     }
 }
