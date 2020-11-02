@@ -108,7 +108,7 @@ namespace Sudoku
             var successCount = results.Aggregate(0, (total, current) => total += (current.success ? 1 : 0));
 
             Console.WriteLine("Solved {0:00}% ({1}/{2}) in {3:000.00}ms (wall time {4:000.00}ms)",
-                ((double)successCount / puzzles.Count) * 100,
+                Math.Floor(((double)successCount / puzzles.Count) * 100),
                 successCount,
                 puzzles.Count,
                 totalTime.TotalMilliseconds,
